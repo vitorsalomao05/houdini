@@ -49,6 +49,37 @@ repo map + real commands + the top BACKLOG item.
 3. Keep `BACKLOG.md` and `CONTEXT.md` current as reality changes. Prefer proposing and
    discussing before any large rebuild — everything is open to change, but not silently.
 
+### Model routing
+
+- **Fable 5 (default)** — build-loop units: discovery, planning-heavy implementation,
+  multi-file changes.
+- **Opus 4.8** — routine/mechanical edits, line-level code review, and **security-adjacent
+  code**. Houdini handles Keychain credentials and OAuth tokens, so auth/credential paths
+  are security-adjacent by definition (e.g. `core/**/ClaudeAuth*`, `ClaudeOAuthProvider`,
+  `ClaudeLoginWindow`, anything reading the Keychain or handling cookies/tokens) → Opus.
+- **Sonnet** — interactive/conversational sessions.
+
+### Git workflow
+
+- The **Builder owns git** — it branches, stages, and commits its own work.
+- **Branch per unit** of work (`feat/…`, `fix/…`, `chore/…`, `docs/…`).
+- **Conventional Commits**; **no AI-attribution trailer** (no `Co-Authored-By: Claude`,
+  no "Generated with…" lines).
+- 🔴 **Gated actions — explicit human sign-off required first:** `push --force`,
+  `reset --hard`, notarization/signing/release steps, and **any change touching
+  `install.sh` or `SHASUMS256.txt`** (see Guardrails: installer integrity).
+
+### Evidence, not reasoning
+
+- Reports prove results with pasted command output (diffs, test runs, grep hits) — not
+  narrative confidence. If it wasn't run, it isn't verified.
+
+### Anti-over-engineering / budget
+
+- Smallest change that satisfies the unit. No speculative abstractions, no drive-by
+  refactors. If a unit balloons past its BACKLOG scope, stop and re-plan rather than
+  pushing through.
+
 ## Current priorities (app-first — see BACKLOG for detail)
 
 1. **P1 · Login/credential refactor** — simpler, works for *any* Claude Code user, not

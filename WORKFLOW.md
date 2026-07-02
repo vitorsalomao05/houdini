@@ -41,4 +41,12 @@ This keeps each handoff compact and lets the Brain plan the next move precisely.
 ## Conventions
 - One coherent unit of work per prompt; commit at the end with a conventional-commit message.
 - If blocked, set `status: blocked` and ask in `BLOCKERS` rather than guessing.
-- Paste real output (numbers, errors) in `VALIDATION` — the Brain relies on it.
+- Paste real output (numbers, errors) in `VALIDATION` — the Brain relies on it
+  (**evidence, not reasoning**: if it wasn't run, it isn't verified).
+- **Model routing:** Fable 5 by default; Opus 4.8 for routine edits, line-level review,
+  and security-adjacent code (auth/credential/Keychain paths); Sonnet for interactive.
+  See `CLAUDE.md` § Model routing.
+- **Git:** the Builder owns git — branch-per-unit, Conventional Commits, **no
+  AI-attribution trailer**. 🔴 Gated (ask first): force-push, `reset --hard`,
+  notarization/signing/release, anything touching `install.sh` / `SHASUMS256.txt`.
+- **Budget:** smallest change that satisfies the unit; if scope balloons, stop and re-plan.
