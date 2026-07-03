@@ -76,3 +76,7 @@ repo map, the real build/test/run commands, and the current top backlog item.
 ## Privacy posture
 
 Credentials never leave the device. Tokens/cookies live in the macOS Keychain. No Houdini server ever sees them — there is none. Requests go straight from your Mac to each provider's own endpoint. The landing site has a dedicated trust/privacy section because the app touches logins.
+
+## License
+
+Free and open source under the [MIT License](LICENSE).
