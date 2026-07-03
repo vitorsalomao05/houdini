@@ -92,6 +92,8 @@ from the new release, SHA-256 match, idempotent re-run.
       one-liner and every release link automatically).
 - [ ] `apps/menubar/Info.plist` → `CFBundleShortVersionString` = `X.Y.Z` and
       increment `CFBundleVersion`.
+- [ ] `core/Sources/houdini/Version.swift` → `houdiniVersion = "X.Y.Z"` (drives
+      the CLI's `--version`).
 - [ ] `README.md` install one-liner + release link → `vX.Y.Z`.
 - [ ] Any other pinned reference to the old version, with and without the `v`
       prefix (`grep -rIn "vP\.Q\.R\|P\.Q\.R" . | grep -v node_modules`).
