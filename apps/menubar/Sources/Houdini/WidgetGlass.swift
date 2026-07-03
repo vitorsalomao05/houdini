@@ -79,7 +79,8 @@ enum SurfaceBase {
 /// Rendering path, brightest-first:
 /// 1. Reduce Transparency on  → solid ink fill.
 /// 2. macOS 26+               → system `.glassEffect()` (Liquid Glass) + violet wash.
-/// 3. macOS 14/15            → `NSVisualEffectView(.hudWindow, .behindWindow)` + wash.
+/// 3. macOS 14/15            → `NSVisualEffectView(.hudWindow, .behindWindow)` + wash
+///    (also the path for binaries built with a pre-macOS-26 SDK — compile-time guard).
 struct GlassCardBackground: View {
     /// Fallback only — both call sites (popover, widget) always pass an explicit
     /// radius, so this default is never exercised; it tracks the shared card radius
@@ -146,11 +147,19 @@ struct GlassCardBackground: View {
             // we add only a translucent dark scrim (not a second blur) under the wash
             // — keeping the card a consistent dark glass over either appearance.
             Theme.Colors.hostScrim
-        } else if #available(macOS 26, *) {
-            // Liquid Glass (system). Clear so the system effect shows through.
-            Color.clear.glassEffect(in: shape)
         } else {
+            // `.glassEffect(in:)` exists only in the macOS 26 SDK (Xcode 26 /
+            // Swift 6.2+); older toolchains compile just the NSVisualEffectView path.
+            #if compiler(>=6.2)
+            if #available(macOS 26, *) {
+                // Liquid Glass (system). Clear so the system effect shows through.
+                Color.clear.glassEffect(in: shape)
+            } else {
+                VisualEffectBlur(material: .hudWindow, blending: .behindWindow)
+            }
+            #else
             VisualEffectBlur(material: .hudWindow, blending: .behindWindow)
+            #endif
         }
     }
 }
