@@ -3,7 +3,7 @@
 Each phase = one or more prompts handed to Claude Code. We build the data layer before any UI, then frontends, then distribution and site. Order is chosen to de-risk early.
 
 ## Phase 0 — Repo foundation ✅ (done by the Brain)
-Docs (README, ARCHITECTURE, DECISIONS, PROVIDERS, WORKFLOW), directory skeleton, ADRs. Git init + first commit handled in Phase 1 prompt.
+Docs (README, ARCHITECTURE, DECISIONS, PROVIDERS, WORKFLOW — the last since merged into CLAUDE.md), directory skeleton, ADRs. Git init + first commit handled in Phase 1 prompt.
 
 ## Phase 1 — FetcherCore + Claude adapter (data layer) ✅ (shipped in v0.4.0 — Claude live)
 - SwiftPM workspace: `FetcherCore` library + `houdini` executable.

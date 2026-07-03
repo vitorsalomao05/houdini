@@ -38,6 +38,7 @@ repo map + real commands + the top BACKLOG item.
 - `DECISIONS.md` — ADRs. **Respect these unless we explicitly revise one.**
 - `PROVIDERS.md` — provider-adapter contract + per-provider specs.
 - `ROADMAP.md` — phased plan.
+- `RELEASE.md` — release checklist + per-release go-live records.
 - `CONTEXT.md` / `BACKLOG.md` — the Build Conductor product context and work queue.
 
 ## How we work (Build Conductor)
@@ -48,6 +49,38 @@ repo map + real commands + the top BACKLOG item.
    `BACKLOG.md` → commit.
 3. Keep `BACKLOG.md` and `CONTEXT.md` current as reality changes. Prefer proposing and
    discussing before any large rebuild — everything is open to change, but not silently.
+
+### Brain ⇄ Builder handoff (response format)
+
+*(Merged from the former `WORKFLOW.md`, 2026-07-03.)* Two roles: the **Brain** (planning
+agent) researches, decides, reviews, and emits one copy-paste **PROMPT** per unit of work;
+the **Builder** (Claude Code) executes it in this repo. Every prompt ends by requiring this
+structured response, so each handoff stays compact and verifiable:
+
+```
+### RESULT
+status: success | partial | blocked
+summary: <2–4 sentences>
+
+### CHANGES
+- <path> — <what changed>
+
+### COMMANDS_RUN
+- <cmd> → <result/exit>
+
+### VALIDATION
+- <what was tested> → <pass/fail + key output>
+
+### BLOCKERS / DECISIONS_NEEDED
+- <question for the Brain, or "none">
+
+### NEXT
+- <suggested next step, or "awaiting Brain">
+```
+
+If blocked, set `status: blocked` and ask in `BLOCKERS` rather than guessing. Paste real
+output in `VALIDATION` (evidence, not reasoning). Model routing, git rules, gated actions,
+and the budget rule are defined once in the sections below — not restated per prompt.
 
 ### Model routing
 
