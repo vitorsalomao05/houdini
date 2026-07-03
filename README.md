@@ -32,8 +32,9 @@ neither separately — see ADR-010/011):
 2. **Desktop widget** — the same gauges on your wallpaper, as a draggable, resizable glass panel.
    **Native to the app** (SwiftUI in an `NSPanel`) — toggle it in Settings, no separate install. True 60s refresh.
 
-A glanceable **Notification Center widget** (WidgetKit, `apps/widget`) also exists in the repo;
-Apple caps its refresh at ~15 min (ADR-002), so it's an architecture surface, not advertised on the site.
+A glanceable **Notification Center widget** (WidgetKit) is a *deferred* future surface — never
+built, and hard-blocked under the current distribution (ADR-013); Apple would cap its refresh
+at ~15 min anyway (ADR-002), so it is not advertised on the site.
 
 ## The core idea (read this first)
 

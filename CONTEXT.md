@@ -60,7 +60,8 @@ browser, no scraping (a browser-scrape adapter survives only as a last-resort fa
   shipped only slice (a) (broadened discovery of an existing credential); a user with **no**
   Claude Code credential anywhere is **out of scope by decision**.
 - Menu bar + native desktop widget ship inside one app. A Notification Center WidgetKit
-  widget exists in `apps/widget` but is intentionally **not advertised** (ADR-002).
+  widget was never built and is **deferred** (hard-blocked under the current
+  distribution — ADR-013); it was intentionally never advertised (ADR-002).
 
 **Site** (`site/`, Astro + Tailwind, live at houdini.salomao.org)
 - Live but **not fully polished**. Target is a **100% clean site with zero visual
