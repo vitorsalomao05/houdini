@@ -118,6 +118,33 @@ WCAG-AA clean; concrete gaps captured below.
       per ADR-012; owner may adopt anytime). No change for now.
 - [ ] Ongoing site polish + feature/idea stream (tracked in the Parking lot below).
 
+## P4 · App — Self-update / clean-upgrade command (`houdini update`)  `[ ]`
+
+*Captured 2026-07-01 — future wave, not scheduled yet (comes after P1–P3).*
+
+**Goal.** One command (`houdini update`) that upgrades an installed Houdini to the latest
+release, removes leftover files from any previous version in production, installs the new
+version, and reports the new version to the user.
+
+**Requirements.**
+- Update to the **latest** release via the same pinned-tag, **SHA-256-verified** path as
+  `install.sh` — don't weaken installer integrity (no `sudo`, no Gatekeeper prompt, no forced
+  launch-at-login).
+- **Clean up old-version artifacts** in production before/after install: stale `Houdini.app`
+  (`~/Applications`), old `houdini` CLI (`~/.local/bin`), and anything else a prior version
+  left behind — scoped to a defined owned-file manifest; never touch user data or Keychain
+  credentials.
+- Install the new version, then **display it** on completion (CLI output + the app/menu-bar
+  "About"/version — a clear "you're now on vX.Y.Z").
+
+**Notes / open questions.**
+- Respect **ADR-010** (single advertised version; installer re-fetched from the current tag)
+  and **ADR-006** (ad-hoc via `install.sh` is the shipping path) — likely a thin wrapper over
+  the verified `install.sh` re-run plus an explicit old-version cleanup step. Sparkle stays a
+  separate future option.
+- Decide the surface: CLI subcommand vs. menu-bar "Check for updates" vs. both.
+- Needs a definitive **owned-file manifest** so cleanup is exhaustive but safe (least-privilege).
+
 ---
 
 ## Cross-cutting
