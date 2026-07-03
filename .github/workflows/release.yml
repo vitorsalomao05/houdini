@@ -1,38 +1,54 @@
 name: Release Houdini
 
-# Push a semver tag (e.g. `git tag v0.2.1 && git push origin v0.2.1`) and this
-# builds the same artifacts `apps/menubar/build.sh` produces locally, checksums
-# them exactly like the manual flow, and publishes the GitHub Release.
+# The SOLE release publisher (INS-01/02, DX-01 — manual publishing is retired;
+# RELEASE.md is now "push the tag, watch this run, verify what it published").
 #
-# It needs only a Swift 6 toolchain — `build.sh` wraps `swift build` (no Xcode
-# project / xcodebuild) and signs ad-hoc (`codesign --sign -`, no Apple cert).
-# The runner MUST be Apple Silicon so the binaries are arm64 (install.sh refuses
-# Intel): macos-14 runners are arm64 and ship Xcode 16 / Swift 6.
+# Push a semver tag (e.g. `git tag v0.5.0 && git push origin v0.5.0`) and this
+# builds the same artifacts `apps/menubar/build.sh` produces locally, VERIFIES
+# them (core `swift test` + `houdini-selftest` + built-binary smoke flags),
+# checksums them, and publishes the GitHub Release.
+#
+# Dry run: `gh workflow run "Release Houdini" --ref <branch>` runs the exact
+# same build + verification and ends in a DRAFT release (not public, no git
+# tag) for inspection. Non-strict-semver tags (e.g. v0.0.1-rc1) also route to
+# a draft — only a clean `vX.Y.Z` tag push publishes for real.
+#
+# Toolchain: the app needs the macOS 26 SDK (WidgetGlass.swift uses
+# `.glassEffect(in:)` behind `#if compiler(>=6.2)`); an older SDK would still
+# *build* but silently ship the NSVisualEffectView fallback to macOS 26 users,
+# so the toolchain step asserts SDK >= 26. The runner MUST be Apple Silicon so
+# the binaries are arm64 (install.sh refuses Intel): macos-26 runners are
+# arm64 and ship Xcode 26.
 on:
   push:
     tags:
       - "v*.*.*"
+  workflow_dispatch: # dry run from any branch — always ends in a draft
 
 permissions:
   contents: write # create the GitHub Release + upload assets
 
 jobs:
   release:
-    runs-on: macos-14
+    runs-on: macos-26
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
-      - name: Select a Swift 6 toolchain (Xcode 16+)
+      - name: Select an Xcode 26 toolchain (macOS 26 SDK required)
         run: |
           set -euo pipefail
-          # Package.swift declares swift-tools-version 6.0, so we need Xcode 16+.
-          XC="$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1 || true)"
+          XC="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)"
           [ -n "$XC" ] || XC="$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
           echo "Using $XC"
           sudo xcode-select -s "$XC"
           swift --version
           sw_vers
+          SDK="$(xcrun --show-sdk-version)"
+          echo "macOS SDK: $SDK"
+          # Hard gate: an older SDK compiles the app but drops Liquid Glass
+          # (WidgetGlass.swift's compile-time guard) — never ship that quietly.
+          [ "${SDK%%.*}" -ge 26 ] || { echo "::error::macOS SDK $SDK < 26 — refusing to build release artifacts"; exit 1; }
 
       - name: Build menu bar app (ad-hoc, hardened runtime)
         working-directory: apps/menubar
@@ -41,6 +57,39 @@ jobs:
       - name: Build houdini
         working-directory: core
         run: swift build -c release --product houdini
+
+      - name: Verify — core swift test
+        working-directory: core
+        run: |
+          set -euo pipefail
+          LOG="$RUNNER_TEMP/swift-test.log"
+          swift test 2>&1 | tee "$LOG"
+          # swift test exits 0 having run ZERO tests on a CLT-only toolchain
+          # (DX-03) — assert the suite actually executed here.
+          grep -E 'Test run with [1-9][0-9]* test' "$LOG" \
+            || { echo "::error::swift test executed no tests — silent green refused"; exit 1; }
+
+      - name: Verify — houdini-selftest (mirrored assertions, real exit code)
+        working-directory: core
+        run: swift run houdini-selftest
+
+      - name: Verify — built-binary smoke (--metrictest, --widgettest)
+        run: |
+          set -euo pipefail
+          BIN="apps/menubar/build/Houdini.app/Contents/MacOS/Houdini"
+          # --metrictest: deterministic launch/regression smoke (renders the
+          # menu-bar strings; exits non-zero only on crash/assert).
+          "$BIN" --metrictest
+          # --widgettest: 13 real checks with a genuine pass/fail exit code.
+          # It exits 0 with a "no display available" note on a headless
+          # machine — treat that skip as a failure so verification can't be
+          # silently green (MB-08).
+          LOG="$RUNNER_TEMP/widgettest.log"
+          "$BIN" --widgettest 2>&1 | tee "$LOG"
+          if grep -q "no display available" "$LOG"; then
+            echo "::error::--widgettest skipped (no WindowServer on runner) — verification not green"
+            exit 1
+          fi
 
       - name: Stage assets + generate SHASUMS256.txt
         run: |
@@ -57,11 +106,13 @@ jobs:
           echo "----- SHASUMS256.txt -----"; cat "$STAGE/SHASUMS256.txt"
           echo "STAGE=$STAGE" >> "$GITHUB_ENV"
 
-      - name: Publish GitHub Release
+      - name: Publish GitHub Release (real on vX.Y.Z tag; draft otherwise)
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
           REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
+          RUN_ID: ${{ github.run_id }}
         run: |
           set -euo pipefail
           NOTES="$RUNNER_TEMP/notes.md"
@@ -83,9 +134,25 @@ jobs:
           - \`houdini\` — the data-layer CLI (\`houdini --json\`).
           - \`SHASUMS256.txt\` — SHA-256 of every asset above.
           EOF
-          gh release create "$TAG" \
-            --title "Houdini $TAG" \
-            --notes-file "$NOTES" \
-            "$STAGE/Houdini.app.zip" \
-            "$STAGE/houdini" \
-            "$STAGE/SHASUMS256.txt"
+          if [ "$EVENT" = "push" ] && [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            gh release create "$TAG" \
+              --title "Houdini $TAG" \
+              --notes-file "$NOTES" \
+              "$STAGE/Houdini.app.zip" \
+              "$STAGE/houdini" \
+              "$STAGE/SHASUMS256.txt"
+          else
+            # Dry run (workflow_dispatch or a non-release tag): a DRAFT release
+            # is invisible to the public, becomes no one's "latest", creates no
+            # git tag, and is deleted after inspection.
+            DRYTAG="v0.0.0-dryrun-$RUN_ID"
+            gh release create "$DRYTAG" \
+              --draft \
+              --target "$GITHUB_SHA" \
+              --title "DRY RUN $DRYTAG — do not install" \
+              --notes-file "$NOTES" \
+              "$STAGE/Houdini.app.zip" \
+              "$STAGE/houdini" \
+              "$STAGE/SHASUMS256.txt"
+            echo "Draft dry-run release created: $DRYTAG — delete after inspection (gh release delete $DRYTAG --yes)"
+          fi
