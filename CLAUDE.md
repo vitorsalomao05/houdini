@@ -139,8 +139,9 @@ repo map + real commands + the top BACKLOG item.
   machines (`swift test` no-ops there). **No test targets** in `apps/menubar` (smoke via built
   binary flags: `--selftest`/`--metrictest`/`--snapshot`/`--launchtest`), `apps/widget`, `apps/ios`,
   or `site/`.
-- **`feature_list.json` / init script** — neither existed; **both created this pass**
-  (`feature_list.json` at repo root, `scripts/init.sh`).
+- **`feature_list.json` / init script** — neither existed at FRAME; both were created that
+  pass. `scripts/init.sh` remains; `feature_list.json` was **deleted 2026-07-03** (v1 audit
+  DOC-09/ORG-05 — it had no generator and no consumer).
 
 ## Open questions / proposed doc fixes (flagged, not silently changed)
 
@@ -155,7 +156,7 @@ repo map + real commands + the top BACKLOG item.
   Vercel, the ADR-010/011-forbidden "providers grid" dropped, and the stale ✅ / "← WE ARE HERE"
   markers updated now that v0.4.0 is live.
 - **Google Gemini — RESOLVED 2026-07-03 (v1 audit, A0):** the claim was **dropped** from
-  `README.md`/`CONTEXT.md`/`CLAUDE.md`/`feature_list.json` (DOC-04). Re-add only once a real
-  `PROVIDERS.md` spec + ROADMAP phase exist.
+  `README.md`/`CONTEXT.md`/`CLAUDE.md` (and the since-deleted `feature_list.json`) (DOC-04).
+  Re-add only once a real `PROVIDERS.md` spec + ROADMAP phase exist.
 - **Übersicht — RESOLVED 2026-07-03 (v1 audit, A0):** ADR-002/ADR-003 revised in place —
   Übersicht is recorded as historical; ADR-013 fixes the NSPanel desktop-surface decision.

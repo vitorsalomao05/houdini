@@ -165,8 +165,9 @@ version, and reports the new version to the user.
       is stale and should be corrected.
 - [x] Test coverage/setup — `core/` has swift-testing (`FetcherCoreTests`) + a `houdini-selftest`
       runnable mirror; **no tests** in `apps/*` or `site/`.
-- [x] Init script / `feature_list.json` — neither existed; **both created this pass**
-      (`scripts/init.sh`, `feature_list.json`).
+- [x] Init script / `feature_list.json` — neither existed; both created 2026-07-01.
+      `scripts/init.sh` remains; `feature_list.json` was **deleted 2026-07-03** (v1 audit
+      DOC-09/ORG-05 — no generator, no consumer).
 
 ### Newly surfaced (flag for the user)
 
