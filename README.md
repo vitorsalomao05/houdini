@@ -61,6 +61,10 @@ houdini/
 ├── DECISIONS.md         ← ADRs (why menu bar, why no 60s widget, the rebrand…)
 ├── PROVIDERS.md         ← provider-adapter contract + per-provider specs
 ├── ROADMAP.md           ← phased plan
+├── RELEASE.md           ← release checklist + per-release go-live records
+├── CLAUDE.md            ← operating guide for Claude Code (how we work here)
+├── CONTEXT.md           ← product context (why) — pairs with BACKLOG.md (what's next)
+├── BACKLOG.md           ← prioritized work queue
 ├── core/                ← FetcherCore Swift package (shared data layer) + `houdini` CLI
 ├── apps/
 │   ├── menubar/         ← SwiftUI menu bar app + native desktop widget (flagship)
@@ -68,7 +72,9 @@ houdini/
 │   └── ios/             ← native iOS app + widget scaffold (cookie auth; not yet built — ADR-008)
 ├── site/                ← Astro + Tailwind landing page (deploys via Vercel)
 ├── install.sh           ← one-liner installer (verified download from Releases)
-└── scripts/             ← release helpers + `init.sh` (developer bootstrap)
+├── scripts/             ← developer bootstrap (`init.sh`) — release CI lives in .github/workflows/
+├── conductor/           ← Build Conductor artifacts (tracked audits; local-only prompts)
+└── audit/               ← v1 audit corpus (charter, diagnosis, plan)
 ```
 
 New here? Run [`scripts/init.sh`](scripts/init.sh) to verify your toolchain and print the
