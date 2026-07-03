@@ -77,6 +77,8 @@ struct SettingsView: View {
                     + Text(session.activeAuthLabel).font(.system(size: 13, weight: .semibold))
             }
             caption(accountContext)
+            caption("Houdini reads your existing Claude credential; Anthropic's terms restrict third-party use of subscription OAuth; use at your discretion.")
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
