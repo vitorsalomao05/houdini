@@ -8,9 +8,9 @@
 
 ---
 
-## P1 · App — Login / credential refactor  `[~]`
+## P1 · App — Login / credential refactor  `[x]` *(capped at slice (a) by ADR-012 — shipped)*
 
-> **⚠ ToS note — decided 2026-07-01 (see ADR-012).** Houdini's Claude auth (Claude Code OAuth token + claude.ai cookie) is prohibited third-party use under Anthropic's Consumer Terms; enforcement is active (account bans land on the *user's* own account). **Decision:** keep it **read-only** using the user's existing credential; **freeze** expansion (no refresh / PKCE / cookie-hardening); do not seek permission; do not pivot now (options i/iv are the future fallback). This **caps P1 at slice (a)** — a user with no Claude Code credential at all is out of scope by decision. A short user-facing transparency line is recommended but optional (deferred).
+> **⚠ ToS note — decided 2026-07-01 (see ADR-012).** Houdini's Claude auth (Claude Code OAuth token + claude.ai cookie) is prohibited third-party use under Anthropic's Consumer Terms; enforcement is active (account bans land on the *user's* own account). **Decision:** keep it **read-only** using the user's existing credential; **freeze** expansion (no refresh / PKCE / cookie-hardening); do not seek permission; do not pivot now (options i/iv are the future fallback). This **caps P1 at slice (a)** — a user with no Claude Code credential at all is out of scope by decision. The short user-facing transparency line is **mandatory for v1** (ADR-012 §6, revised 2026-07-03); implementation queued (v1 audit unit B4).
 
 **Problem.** The Claude provider connects cleanly for **Claude Code CLI users** (OAuth
 token in Keychain) but is **buggy/unclean for non-CLI users**, who have no smooth way to
@@ -46,7 +46,7 @@ security posture.
         session; the captured cookie is short-lived and **non-refreshable** → re-login loop on expiry.
       - **Root cause C:** even real CLI users silently lose OAuth when the access token expires
         (`expiresAt` past → unusable; `refreshToken` never used).
-- [~] Design the unified login — **(a) IMPLEMENTED this pass; (c) remains the durable follow-on:**
+- [x] Design the unified login — **(a) IMPLEMENTED; (b)/(c) FROZEN by ADR-012:**
       - **(a) Broaden OAuth/token discovery** — ordered item list (`"Claude Code-credentials"` +
         `"Claude Code"`), `~/.claude/.credentials.json` read fallback, use `refreshToken` to refresh
         a stale access token. *No ADR change; low risk; fixes A+C but not true non-CLI users.*
@@ -68,18 +68,19 @@ security posture.
         A true non-CLI user with **no** Claude Code credential anywhere is **out of scope by
         decision**. Options (i)/(iv) (Anthropic Admin Usage & Cost API / lead with API-key
         providers) are retained as the future fallback if enforcement tightens.
-- [~] Implement behind a clean, testable seam in `core/` (the `CredentialStore` /
+- [x] Implement behind a clean, testable seam in `core/` (the `CredentialStore` /
       `ClaudeAuthResolver` boundary already isolates this well). **slice (a): ordered Keychain
       discovery + `~/.claude/.credentials.json` fallback + in-memory `refreshToken` refresh**,
       all in one `ClaudeOAuthCredentialSource` unit (collapsed the two old private blob structs
       + two read call-sites). Live refresh endpoint **frozen (ADR-012)**; cookie hardening (b)
       and OAuth PKCE (c) are frozen too — **P1 is capped at slice (a).**
-- [~] Test both user types end to end; add regression tests (extend `FetcherCoreTests`).
+- [x] Test both user types end to end; add regression tests (extend `FetcherCoreTests`).
       **slice (a): added `ClaudeAuthResolverTests` (ordered discovery, first-item-wins, file
-      fallback, refresh, absent) + a `houdini-selftest` mirror (29 checks PASS here).** Still
-      open: end-to-end coverage for the non-CLI **cookie** user (part of (b)/(c)).
-- [~] Update `PROVIDERS.md` / relevant ADR — **ADR-012 decided** (read-only + frozen); `PROVIDERS.md`
-      gets a one-line ToS-stance note this pass. A full security review is only needed if refresh /
+      fallback, refresh, absent) + a `houdini-selftest` mirror (29 checks PASS here).**
+      End-to-end coverage for the non-CLI **cookie** user belonged to (b)/(c) — out of scope
+      with those frozen (ADR-012).
+- [x] Update `PROVIDERS.md` / relevant ADR — **ADR-012 decided** (read-only + frozen); `PROVIDERS.md`
+      carries the ToS-stance note. A full security review is only needed if refresh /
       PKCE is ever unfrozen — **out of scope now by decision.**
 
 ## P2 · App — Widget accessibility + visual polish  `[~]`
@@ -114,8 +115,9 @@ WCAG-AA clean; concrete gaps captured below.
 - [x] Hero H1 — **decided: KEEP GENERIC** ("AI usage", per ADR-012's low-profile posture); the
       audit's "sharpen toward Claude/menu-bar" is ToS-gated and intentionally **not** actioned
       (no change for now).
-- [x] Explicit "Mac → Anthropic, no Houdini server" trust line — **decided: DEFERRED** (optional
-      per ADR-012; owner may adopt anytime). No change for now.
+- [x] Explicit "Mac → Anthropic, no Houdini server" trust line — decision **revised 2026-07-03**:
+      the transparency line is now **mandatory for v1** (ADR-012 §6); implementation queued
+      (v1 audit unit B4 — app Settings + site privacy page).
 - [ ] Ongoing site polish + feature/idea stream (tracked in the Parking lot below).
 
 ## P4 · App — Self-update / clean-upgrade command (`houdini update`)  `[ ]`
@@ -160,9 +162,9 @@ version, and reports the new version to the user.
 - [x] Cleanest unified-login design — **DECIDED in ADR-012** (2026-07-01): keep Claude read-only
       on the user's existing credential and freeze expansion; **P1 capped at slice (a)**, already
       shipped. (The "user with no Claude Code credential at all" case is out of scope by decision.)
-- [x] Site deploy target + CI — **Vercel**, project `houdini`, manual prebuilt CLI (`vercel --prod`
-      from `site/`); **no site CI** in `.github/workflows/`. `ROADMAP.md` Phase 7 ("Cloudflare Pages")
-      is stale and should be corrected.
+- [x] Site deploy target + CI — **Vercel**, project `houdini`, manual prebuilt CLI (see
+      `RELEASE.md`); at survey time there was **no site CI** in `.github/workflows/`.
+      `ROADMAP.md` Phase 7 ("Cloudflare Pages") was stale; corrected 2026-07-01.
 - [x] Test coverage/setup — `core/` has swift-testing (`FetcherCoreTests`) + a `houdini-selftest`
       runnable mirror; **no tests** in `apps/*` or `site/`.
 - [x] Init script / `feature_list.json` — neither existed; both created 2026-07-01.
@@ -173,24 +175,25 @@ version, and reports the new version to the user.
 
 - [x] **ADR-006 vs reality — RESOLVED 2026-07-01:** ADR-006 revised in place to record that the
       ad-hoc-signed `install.sh`/`curl|bash` path is the shipping reality (notarized DMG deferred).
-- [x] **ROADMAP.md refresh — RESOLVED 2026-07-01:** Phase 7 corrected to Vercel, the
-      ADR-010/011-forbidden "providers grid" dropped, and stale ✅ / "← WE ARE HERE" markers
-      updated now that v0.4.0 is live.
-- [ ] **Gemini gap (still open):** advertised in `README.md`/`CONTEXT.md` but absent from
-      `PROVIDERS.md`/`ROADMAP.md` — spec it or drop the claim.
+- [x] **ROADMAP.md refresh — RESOLVED 2026-07-01, completed 2026-07-03:** Phase 7 corrected to
+      Vercel and the ADR-010/011-forbidden "providers grid" dropped on 2026-07-01; the 07-01
+      marker pass was incomplete (v1 audit ORG-06/DOC-08) and a real marker pass landed
+      2026-07-03 (Phase 2 ✅, App-Group bullet moved to Phase 4, Phase 5 cookie item marked
+      shipped, Phases 6/7 ✅).
+- [x] **Gemini gap — RESOLVED 2026-07-03 (v1 audit, A0/DOC-04):** the claim was **dropped**
+      from `README.md`/`CONTEXT.md`/`CLAUDE.md`. Re-add only once a real `PROVIDERS.md` spec +
+      ROADMAP phase exist.
 - [x] **README/CLAUDE repo-layout — done:** `apps/ios/` added to the layout maps (`CLAUDE.md` +
       README); `apps/widget/` documented as a README-only placeholder, not a built target.
 
 ## Immediate next steps
 
-*Framing + scope sign-off are long done. The login decision (**ADR-012**), the site audit +
-its ToS-independent quick-wins (commit `78e2bf3`), and the P2 accessibility slice (commit
-`19d3ed0`) have all shipped. Current focus:*
+*Framing + scope sign-off are long done. The login decision (**ADR-012**, P1 capped and shipped),
+the site audit + its ToS-independent quick-wins (commit `78e2bf3`), and P2 slices 1–2 (commits
+`19d3ed0`, `1d8912b`) have all shipped. Current focus:*
 
-1. [~] **P2 slice 2** — visual polish + shared visual tokens across the menu bar and desktop widget.
-2. [ ] **P2 slice 3** — verify gauges / reset timers / overage against real Claude Pro/Max data.
-3. [ ] **P3 ongoing** — continue site polish + the feature/idea stream (Parking lot); the Gemini
-       provider claim still needs to be specced or dropped (see flags above).
+1. [ ] **P2 slice 3** — verify gauges / reset timers / overage against real Claude Pro/Max data.
+2. [ ] **P3 ongoing** — continue site polish + the feature/idea stream (Parking lot).
 
 ## Parking lot / ideas (ongoing)
 
