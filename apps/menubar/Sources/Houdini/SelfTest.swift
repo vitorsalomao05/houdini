@@ -6,7 +6,9 @@ private func err(_ s: String) { FileHandle.standardError.write(Data((s + "\n").u
 
 /// Headless proof modes for the things that are awkward to screenshot:
 /// • `--selftest`   — drives the real `UsageModel` timer and changes the interval
-///                    live, proving the timer reschedules without a restart.
+///                    live, proving the timer reschedules without a restart; then
+///                    runs a persistent-429 stub proving the rate-limit backoff
+///                    widens the effective interval and resets on success.
 /// • `--metrictest` — prints the menu-bar text for every primary-metric choice,
 ///                    proving the Settings picker changes what the bar shows.
 /// • `--launchtest` — calls SMAppService.register()/unregister() and reports the
@@ -51,9 +53,87 @@ enum SelfTest {
 
             RunLoop.main.run(until: Date().addingTimeInterval(duration))
             err("=== selftest done (ended at activeInterval=\(model.refreshInterval)s) ===")
-            _ = cancellables
-            exit(0)
+            cancellables.removeAll()
+
+            let backoffOK = backoffPhase(interval: 0.4)
+            exit(backoffOK ? 0 : 1)
         }
+    }
+
+    // MARK: Rate-limit backoff
+
+    /// Fails every `fetch()` with `.rateLimited` until `failFirst` attempts have
+    /// happened, then succeeds — timestamping each attempt so the test can measure
+    /// the real gap between polls. `@unchecked Sendable`: mutable state is
+    /// lock-guarded.
+    private final class RateLimit429Stub: UsageProvider, @unchecked Sendable {
+        let id = "stub-429"
+        let displayName = "Stub (429)"
+        let authMethod: AuthMethod = .keychainOAuth
+        let capabilities: Capabilities = [.usagePct, .resetTimer, .dollarBalance]
+        let refreshInterval: TimeInterval = 60
+
+        private let lock = NSLock()
+        private let failFirst: Int
+        private var attempts: [Date] = []
+
+        init(failFirst: Int) { self.failFirst = failFirst }
+
+        var recordedAttempts: [Date] {
+            lock.lock(); defer { lock.unlock() }
+            return attempts
+        }
+
+        func fetch() async throws -> [UsageMetric] {
+            lock.lock()
+            attempts.append(Date())
+            let n = attempts.count
+            lock.unlock()
+            guard n > failFirst else { throw ProviderError.rateLimited }
+            return PreviewData.sampleMetrics()
+        }
+    }
+
+    /// Persistent-429 backoff proof: with a provider that rate-limits the first
+    /// three fetches, the gap between fetch attempts must widen multiplicatively
+    /// (≈2×, 4×, 8× the base interval — skips of 1, 3, 7 ticks), then snap back
+    /// to ≈1× after the first success. Prints each measured gap; returns whether
+    /// all gaps fell inside a generous timing window.
+    @MainActor
+    private static func backoffPhase(interval: TimeInterval) -> Bool {
+        let stub = RateLimit429Stub(failFirst: 3)
+        let model = UsageModel(provider: stub, refreshInterval: interval)
+        err("=== backofftest: persistent 429 must widen the effective interval (base=\(interval)s) ===")
+        model.start()
+        // Attempts land at ~0, 2×, +4×, +8× the interval (14 ticks), then every
+        // 1× after the success — 25 intervals covers the reset proof with margin.
+        let phaseStart = Date()
+        RunLoop.main.run(until: Date().addingTimeInterval(interval * 25))
+
+        let attempts = stub.recordedAttempts
+        for (i, at) in attempts.enumerated() {
+            err(String(format: "  attempt #%d at t+%.2fs", i + 1, at.timeIntervalSince(phaseStart)))
+        }
+        let deltas = zip(attempts.dropFirst(), attempts).map { $0.0.timeIntervalSince($0.1) }
+        // Expected gap (in multiples of the base interval) and accepted window.
+        let expected: [(multiple: Double, range: ClosedRange<Double>)] = [
+            (2, 1.5...3.0),   // after 429 #1: skip 1 tick
+            (4, 3.0...6.0),   // after 429 #2: skip 3 ticks
+            (8, 6.0...12.0),  // after 429 #3: skip 7 ticks
+            (1, 0.5...1.8),   // success → reset to the user's cadence
+        ]
+        var ok = deltas.count >= expected.count
+        if !ok { err("  FAIL: only \(attempts.count) fetch attempts recorded") }
+        for (i, exp) in expected.enumerated() where i < deltas.count {
+            let multiple = deltas[i] / interval
+            let inWindow = exp.range.contains(multiple)
+            ok = ok && inWindow
+            let verdict = inWindow ? "ok" : "FAIL"
+            err(String(format: "  attempt #%d → #%d: Δ%.2fs ≈ %.1f× base (expected ~%.0f×) %@",
+                       i + 1, i + 2, deltas[i], multiple, exp.multiple, verdict))
+        }
+        err("=== backofftest \(ok ? "PASS" : "FAIL"): interval widened 2×→4×→8× under 429, reset on success ===")
+        return ok
     }
 
     // MARK: Primary-metric switch

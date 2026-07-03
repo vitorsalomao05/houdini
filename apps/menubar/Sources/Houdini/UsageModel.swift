@@ -4,7 +4,10 @@ import FetcherCore
 
 /// App-scoped view model. Polls a `UsageProvider` every `refreshInterval` seconds
 /// and publishes the result. Keeps the last good reading on error (never flashes
-/// empty), per ARCHITECTURE.md.
+/// empty), per ARCHITECTURE.md. On `.rateLimited` the automatic cadence backs off
+/// multiplicatively (skip 1, 3, then 7 ticks — 2×/4×/8× the interval, capped) and
+/// snaps back to the user's cadence on the next success; manual Refresh is never
+/// gated.
 @MainActor
 final class UsageModel: ObservableObject {
     enum State: Equatable {
@@ -42,6 +45,19 @@ final class UsageModel: ObservableObject {
     private var fetchTask: Task<Void, Never>?
     private var fetchGeneration = 0
     private var cancellables = Set<AnyCancellable>()
+
+    // MARK: Rate-limit backoff (real, not just copy — ARC-02/CORE-06/MB-06)
+    /// Timer ticks to swallow before the next automatic fetch. Set after a
+    /// `.rateLimited` failure, decremented per tick, cleared on success.
+    private var ticksToSkip = 0
+    /// Consecutive `.rateLimited` failures. Drives the multiplicative skip
+    /// (2^strikes − 1 ticks → 2×, 4×, 8× the base interval). Capped where the
+    /// skip saturates so it can't overflow.
+    private var rateLimitStrikes = 0
+    /// Skip at most 7 ticks → the effective interval never exceeds 8× the
+    /// user's cadence (8 min at the default 60s).
+    private static let maxBackoffTicks = 7
+    private static let maxBackoffStrikes = 3 // (1 << 3) − 1 == maxBackoffTicks
 
     init(provider: any UsageProvider = ClaudeOAuthProvider(),
          refreshInterval: TimeInterval = 60,
@@ -106,7 +122,7 @@ final class UsageModel: ObservableObject {
     private func scheduleTimer() {
         let t = Timer.scheduledTimer(withTimeInterval: refreshInterval, repeats: true) { [weak self] _ in
             // Hop back onto the main actor; the Timer block itself is non-isolated.
-            Task { @MainActor in self?.refreshNow() }
+            Task { @MainActor in self?.timerTick() }
         }
         // Coalesce wake-ups proportionally (still sub-interval); we don't need
         // sub-second accuracy, but a 5s tolerance on a 30s timer is fine too.
@@ -119,6 +135,18 @@ final class UsageModel: ObservableObject {
     /// avoid kicking a real fetch / re-resolve from the headless `--snapshot` preview
     /// models, which have no resolver.
     var resolvesAuthLive: Bool { resolveProvider != nil }
+
+    /// One automatic timer tick. While rate-limit backoff is active, swallow the
+    /// tick instead of fetching — only the automatic cadence widens; the Refresh
+    /// button and popover-open path still call `refreshNow()` directly, so a
+    /// manual retry is always allowed.
+    private func timerTick() {
+        if ticksToSkip > 0 {
+            ticksToSkip -= 1
+            return
+        }
+        refreshNow()
+    }
 
     /// Fetch once now. Safe to call from the Refresh button or the timer.
     func refreshNow() {
@@ -157,11 +185,20 @@ final class UsageModel: ObservableObject {
                 self.lastUpdated = Date()
                 self.needsLogin = false
                 self.state = .ok
+                // Success ends any rate-limit backoff: snap back to the user's cadence.
+                self.rateLimitStrikes = 0
+                self.ticksToSkip = 0
             } catch {
                 guard generation == self.fetchGeneration else { return } // superseded → drop
                 // Last-good cache: keep `metrics`/`lastUpdated`; just flag the reason.
                 self.needsLogin = (error as? ProviderError).map { if case .needsLogin = $0 { true } else { false } } ?? false
                 self.state = .error(UsageModel.message(for: error))
+                if case ProviderError.rateLimited = error {
+                    // Widen the automatic cadence: skip 1, 3, then 7 ticks (2×/4×/8×
+                    // the interval, capped) until a fetch succeeds again.
+                    self.rateLimitStrikes = min(self.rateLimitStrikes + 1, Self.maxBackoffStrikes)
+                    self.ticksToSkip = min((1 << self.rateLimitStrikes) - 1, Self.maxBackoffTicks)
+                }
             }
             if generation == self.fetchGeneration { self.fetchTask = nil }
         }

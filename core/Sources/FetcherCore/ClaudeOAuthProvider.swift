@@ -131,17 +131,49 @@ public struct ClaudeOAuthProvider: UsageProvider {
         explicitVersion ?? Self.detectedClientVersion()
     }
 
-    /// Best-effort `claude --version` lookup (output like "2.1.178 (Claude Code)").
+    /// Best-effort `claude --version` lookup (output like "2.1.178 (Claude Code)"),
+    /// cached for the process lifetime: the probe spawns a subprocess (~0.4s wall),
+    /// so re-running it on every poll would dominate the per-poll cost (CORE-03).
+    /// `static let` gives thread-safe, at-most-once semantics.
     /// macOS only: Claude Code exists only on the desktop, and the probe needs
     /// `Foundation.Process` (unavailable on iOS). On other platforms we fall straight
     /// through to the pinned `fallbackVersion`. (The OAuth provider itself is a
     /// desktop-only concept — iOS authenticates via the cookie provider — so the
     /// constant is never actually exercised on iOS.)
-    public static func detectedClientVersion() -> String {
+    public static func detectedClientVersion() -> String { cachedClientVersion }
+
+    private static let cachedClientVersion: String = probeClientVersion()
+
+    /// One-shot probe behind `cachedClientVersion`: known absolute install paths
+    /// first (a credential-handling app shouldn't execute whatever PATH resolves
+    /// to when it can pin the binary), then `/usr/bin/env claude` as a last
+    /// resort, then the pinned constant.
+    private static func probeClientVersion() -> String {
         #if os(macOS)
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let candidates = [
+            home + "/.local/bin/claude",     // native installer default
+            home + "/.claude/local/claude",  // `claude migrate-installer` local install
+            "/opt/homebrew/bin/claude",      // Homebrew / npm -g (Apple Silicon)
+            "/usr/local/bin/claude",         // npm -g (Intel default prefix)
+        ]
+        for path in candidates where FileManager.default.isExecutableFile(atPath: path) {
+            if let v = versionToken(executable: path, arguments: ["--version"]) { return v }
+        }
+        if let v = versionToken(executable: "/usr/bin/env", arguments: ["claude", "--version"]) {
+            return v
+        }
+        #endif // os(macOS)
+        return fallbackVersion
+    }
+
+    #if os(macOS)
+    /// Run `<executable> <arguments>` and return the first numeric-leading stdout
+    /// token (e.g. "2.1.178" from "2.1.178 (Claude Code)"); `nil` on any failure.
+    private static func versionToken(executable: String, arguments: [String]) -> String? {
         let proc = Process()
-        proc.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        proc.arguments = ["claude", "--version"]
+        proc.executableURL = URL(fileURLWithPath: executable)
+        proc.arguments = arguments
         let out = Pipe()
         proc.standardOutput = out
         proc.standardError = Pipe()
@@ -155,11 +187,11 @@ public struct ClaudeOAuthProvider: UsageProvider {
                 return String(token)
             }
         } catch {
-            // fall through to the constant
+            // fall through to the next candidate / constant
         }
-        #endif // os(macOS)
-        return fallbackVersion
+        return nil
     }
+    #endif // os(macOS)
 
     // MARK: - Parsing
 
