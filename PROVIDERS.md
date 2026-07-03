@@ -6,7 +6,7 @@ Every data source implements one protocol. The UI never special-cases a provider
 
 ```swift
 protocol UsageProvider {
-    var id: String { get }                       // "claude", "anthropic-console", "openai-platform", "chatgpt-plus"
+    var id: String { get }                       // "claude", "claude-cookie", "anthropic-console", "openai-platform", "chatgpt-plus"
     var displayName: String { get }
     var authMethod: AuthMethod { get }           // .keychainOAuth | .sessionCookie | .adminApiKey
     var capabilities: Capabilities { get }        // what this provider can actually supply
@@ -34,20 +34,20 @@ struct UsageMetric {
 enum AuthMethod { case keychainOAuth, sessionCookie, adminApiKey }
 ```
 
-Cross-cutting services in `FetcherCore`: `CredentialStore` (Keychain), `Scheduler` (interval + jitter + backoff), `Cache` (last-good value).
+Cross-cutting services in `FetcherCore`: `CredentialStore` (Keychain read/write), `ClaudeOAuthCredentialSource` (ordered credential discovery + in-memory refresh), `ClaudeUsageParser` (one parser for both Claude endpoint dialects), `CredentialRedirectGuard` (strips credential headers on cross-host redirects). There is **no `Scheduler` or `Cache` in core**: polling and last-good caching live in the menu bar app's `UsageModel` (user-chosen 30/60/120 s interval; failed polls back off multiplicatively), and the `houdini` CLI does a single uncached fetch.
 
 ---
 
 ## claude (Pro/Max) — FLAGSHIP, build first
 - **Capabilities:** `usagePct`, `resetTimer` (+ `dollarBalance` if "Claude Extra" overage).
-- **Primary auth:** `.keychainOAuth` — reuse the **Claude Code OAuth token** from Keychain (item commonly named `Claude Code`; CLI also writes `~/.claude`). The user already runs Claude Code, so this needs zero new login.
+- **Primary auth:** `.keychainOAuth` — reuse the **Claude Code OAuth token**. Discovery order (`ClaudeOAuthCredentialSource`): Keychain item `Claude Code-credentials` (primary), then the classic `Claude Code` item, then the `~/.claude/.credentials.json` file. The user already runs Claude Code, so this needs zero new login.
 - **Primary endpoint:** `GET https://api.anthropic.com/api/oauth/usage`
   - Headers: `Authorization: Bearer <token>` **and** `User-Agent: claude-code/<version>` (always send it — a missing UA **may cause throttling under sustained use**; the code keeps it for safety).
   - Returns 5-hour / 7-day / Opus-7-day utilization.
-- **Fallback auth:** `.sessionCookie` — `sessionKey` cookie (`sk-ant-sid01-…`) from an embedded WebView login. Then:
+- **Fallback auth:** `.sessionCookie` — realized in code as a **sibling provider `claude-cookie`** (`ClaudeCookieProvider`), chosen at runtime by `ClaudeAuthResolver` when no usable OAuth credential resolves (or when the user prefers cookie auth). The `sessionKey` cookie (`sk-ant-sid01-…`) comes from an embedded WebView login and is stored in Houdini's own Keychain item (`Houdini-claude-session`). Then:
   - `GET https://claude.ai/api/organizations` → read `org_id`.
   - `GET https://claude.ai/api/organizations/{org_id}/usage` → fields: `five_hour.utilization_pct`, `five_hour.reset_at`, `seven_day.utilization_pct`, `seven_day_opus.utilization_pct`, `extra_usage.current_spending`, `extra_usage.budget_limit`.
-- **Fragility:** medium (undocumented). **Risk:** low (own account, low-frequency).
+- **Fragility:** medium (undocumented). **Risk:** low (own account), though the volume is not a trickle: steady polling at the default 60 s is ~1,440 requests/day, and the cookie path issues two requests per poll (org lookup + usage).
 - **ToS / stance (ADR-012):** subscription OAuth token / claude.ai cookie use in a third-party app is **restricted by Anthropic's Consumer Terms**; Houdini's stance is **read-only + frozen** — it reads the user's existing on-device credential and adds no refresh / PKCE / cookie-hardening.
 - **Reference:** `github.com/ttar-p/claude-usage-widget`, `github.com/hamed-elfayome/Claude-Usage-Tracker`.
 

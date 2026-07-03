@@ -10,44 +10,61 @@ The riskiest part of this product is **"can we reliably read the number the user
                   ┌─────────────────────────────────────────────┐
                   │              FetcherCore (Swift)            │
                   │                                             │
-                  │  CredentialStore (Keychain)                 │
+                  │  CredentialStore (Keychain read/write)      │
+                  │  ClaudeOAuthCredentialSource (discovery)    │
                   │  ProviderRegistry → [UsageProvider]         │
-                  │  Scheduler (per-provider interval, backoff) │
-                  │  Cache (last-good value, never flash empty) │
+                  │   ├─ ClaudeOAuthProvider  ("claude")        │
+                  │   └─ ClaudeCookieProvider ("claude-cookie") │
+                  │  ClaudeUsageParser (one parser, 2 dialects) │
                   │                                             │
                   │  fetch() → [UsageMetric]                    │
                   │   {label, pct?, used?, limit?, resetAt?,    │
                   │    dollars?, providerId}                    │
-                  └───────┬───────────────┬──────────────┬──────┘
-            links direct  │               │ CLI (JSON)   │ App Group cache
-                          ▼               ▼              ▼
-              ┌──────────────────────┐  ┌──────────┐  ┌────────────────────┐
-              │  MENU BAR APP        │  │  houdini │  │  WIDGETKIT WIDGET  │
-              │  + DESKTOP WIDGET    │  │  CLI     │  │  reads cache only  │
-              │  one process, 60s    │  │  --json  │  │  ~15min .after()   │
-              │  MenuBarExtra popover│  │  stdout  │  │  host pushes reload│
-              │  + NSPanel glass card│  │          │  │  NOT 60s ⚠️        │
-              │  TRUE 60s ✅         │  │          │  │                    │
-              └───────┬──────────────┘  └──────────┘  └────────────────────┘
-                      │ writes value to App Group + WidgetCenter.reloadTimelines()
-                      └──────────────────────────────────────────►
+                  └───────┬───────────────┬─────────────────────┘
+            links direct  │               │ CLI (JSON)
+                          ▼               ▼
+              ┌──────────────────────┐  ┌──────────┐
+              │  MENU BAR APP        │  │  houdini │
+              │  + DESKTOP WIDGET    │  │  CLI     │
+              │  one process, one    │  │  --json  │
+              │  UsageModel poller   │  │  stdout  │
+              │  MenuBarExtra popover│  │  no cache│
+              │  + NSPanel glass card│  │          │
+              │  TRUE 60s ✅         │  │          │
+              └──────────────────────┘  └──────────┘
 ```
+
+*Planned, not built:* a WidgetKit Notification Center widget fed by an App Group
+cache + `WidgetCenter.reloadTimelines()` (ADR-002). No App-Group write and no
+`WidgetCenter` call exist in the app today; the design is recorded below.
 
 ## Components
 
 ### FetcherCore (Swift Package)
 The single source of truth for data. No UI. Exposes:
-- `UsageProvider` protocol (see `PROVIDERS.md`).
-- `CredentialStore` — reads/writes secrets in the macOS Keychain; can also read the Claude Code OAuth token (`~/.claude` / Keychain item `Claude Code`).
-- `Scheduler` — per-provider polling interval (default 60s), jitter, exponential backoff on 401/403/429, last-good caching.
+- `UsageProvider` protocol (see `PROVIDERS.md`) and `ProviderRegistry`, holding the two shipped
+  adapters: `ClaudeOAuthProvider` (`"claude"`) and `ClaudeCookieProvider` (`"claude-cookie"`).
+  `ClaudeAuthResolver` picks between them at runtime based on which credential is present.
+- `CredentialStore` — reads/writes secrets in the macOS Keychain (native `SecItem` calls, plus a
+  `/usr/bin/security` CLI path for items whose ACL would otherwise require a prompt).
+- `ClaudeOAuthCredentialSource` — OAuth credential discovery, tried in order: Keychain item
+  `"Claude Code-credentials"` (primary), then the classic `"Claude Code"` item, then the
+  `~/.claude/.credentials.json` file. Refreshes a stale token **in memory only**.
 - `UsageSnapshot` — normalized result `[UsageMetric]` consumed by every frontend.
 - A thin **`houdini`** executable target that prints the current snapshot as JSON to stdout — a stable contract for scripting and what we use to validate against a real account before building UI.
+
+There is **no `Scheduler` or `Cache` component in core**. Polling and last-good caching live in
+the menu bar app's `UsageModel`: a repeating timer at the user-chosen interval (30/60/120 s,
+default 60 s) whose failed polls back off multiplicatively until the next success, keeping the
+last good metrics in memory so the UI never flashes empty. The CLI does one fetch, no cache.
 
 ### Menu bar app (flagship) — `apps/menubar`
 - SwiftUI `MenuBarExtra` (macOS 13+), `.menuBarExtraStyle(.window)` popover.
 - Timer lives in an `ObservableObject` owned at scene level (NOT inside the menu view — known macOS bug where menu-hosted timers stall).
 - `SMAppService.mainApp.register()` for launch-at-login, gated behind a user toggle.
-- Writes latest value into the **App Group** container and calls `WidgetCenter.shared.reloadAllTimelines()` so the WidgetKit widget stays as fresh as Apple allows.
+- *Planned, not built:* writing the latest value into an **App Group** container and calling
+  `WidgetCenter.shared.reloadAllTimelines()` for the future WidgetKit widget. No App-Group write
+  or `WidgetCenter` call exists in the app today.
 - True 60s refresh — the surface that fully meets the original requirement.
 - Also **hosts the desktop widget** (below) in the same process, so both share one `UsageModel`/timer.
 
@@ -62,8 +79,11 @@ The single source of truth for data. No UI. Exposes:
 - Persists its frame + `displayID` to `UserDefaults`; restores across relaunch/reboot and clamps back
   onto a visible screen if a monitor is unplugged. (Replaces the former Übersicht `.jsx` widget.)
 
-### WidgetKit widget — `apps/widget`
-- `TimelineProvider` reads only the **cached** value from the App Group (cheap reloads).
+### WidgetKit Notification Center widget — DESIGNED, NOT BUILT
+> **Status: designed, not built (ADR-002).** No WidgetKit target, App-Group write, or
+> `WidgetCenter` call exists in the repo. This section records the design for a possible
+> post-v1 glanceable surface — it describes no shipping code.
+- `TimelineProvider` would read only the **cached** value from the App Group (cheap reloads).
 - Steady-state `.after(~15min)` policy; host app pushes `reloadTimelines` on meaningful change.
 - Honest UX copy ("updated a few minutes ago"). Cannot do 60s — Apple budget ~40–70 reloads/day. See `DECISIONS.md` ADR-002.
 
@@ -98,6 +118,22 @@ built yet; this fixes the direction and the key-safety rule.)*
 1. **JSON endpoint + Keychain token/cookie** (BEST — native `URLSession`, no browser).
 2. **WKWebView with injected cookies** (native fallback if JS render needed).
 3. **Bundled headless Chromium / background Chrome reload** (LAST RESORT — heavy, signing pain, brittle DOM).
+
+## Network surface — complete endpoint inventory
+
+Houdini has no server; every request goes straight from the user's Mac to the provider.
+These are **all** the endpoints reachable from the shipped macOS code:
+
+| # | Endpoint | Auth sent | Caller |
+|---|----------|-----------|--------|
+| 1 | `GET https://api.anthropic.com/api/oauth/usage` | `Authorization: Bearer <OAuth token>` + `User-Agent: claude-code/<version>` | `ClaudeOAuthProvider` |
+| 2 | `GET https://claude.ai/api/organizations` | `sessionKey` cookie | `ClaudeCookieProvider` |
+| 3 | `GET https://claude.ai/api/organizations/{org_id}/usage` | `sessionKey` cookie | `ClaudeCookieProvider` |
+| 4 | `https://claude.ai/login` (WKWebView page load) | interactive sign-in | `ClaudeLoginWindow` — browser semantics: the page may pull claude.ai subresources / SSO redirects |
+
+No telemetry, no update check, no Houdini-owned host, no plain `http://` anywhere. Both API
+paths share an ephemeral `URLSession` (no persistent cookie/cache store) and a redirect guard
+(`CredentialRedirectGuard`) that strips credential headers on cross-host redirects.
 
 ## Key constraints to honor
 - Always send the `User-Agent` header on the Anthropic OAuth usage endpoint (`claude-code/<version>`). Omitting it **may cause throttling under sustained use**; keep it for safety. (Phase 1 note: a single call without the UA still returned 200, so the "persistent 429" behavior is load-dependent, not absolute.)
