@@ -83,6 +83,9 @@ from the new release, SHA-256 match, idempotent re-run.
 - [ ] Decide the bump (semver): patch / minor / major. Note it in the release notes.
 - [ ] No "coming soon" / "Soon" / "next milestone" copy anywhere user-facing
       (`grep -rIni 'coming soon\|>soon<\|next milestone' site/src README.md`).
+- [ ] The site's gauge legend still matches the app's thresholds (<60 ok,
+      60–85 warn, >85 alert — `Formatting.swift` is the source of truth):
+      `grep -rn '0–59\|60–84\|85–100' site/src/pages/guide.astro` hits the legend.
 
 ## 2 · Bump the version (every place it lives)
 - [ ] `site/src/config.ts` → `export const version = "X.Y.Z"` (drives the install

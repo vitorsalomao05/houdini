@@ -57,8 +57,9 @@ export const nav = [
 ];
 
 // ── What Houdini reveals (compact icon strip) ────────────────────────────────
-// The four dimensions Houdini pulls into the open. `icon` maps to an inline SVG
-// path in Reveals.astro. No status badges — co-equal, glanceable.
+// The three dimensions Houdini pulls into the open — only what the app can
+// honestly fill (usage %, reset timers, extra-usage dollars). No status badges
+// — co-equal, glanceable.
 export const reveals = [
   {
     title: "Limits",
@@ -69,11 +70,6 @@ export const reveals = [
     title: "Sessions",
     body: "Your rolling 5-hour window, and exactly when it rolls back to zero.",
     icon: "clock",
-  },
-  {
-    title: "Tokens",
-    body: "How much you've burned through each window, kept current to the minute.",
-    icon: "tokens",
   },
   {
     title: "Spend",
@@ -104,7 +100,7 @@ export const faqs = [
   },
   {
     q: "Do my credentials ever leave my Mac?",
-    a: "No. There is no Houdini account and no Houdini server. Houdini reads the credential already on your machine — your Claude Code OAuth token, or a claude.ai session you grant once — and calls the provider directly from your Mac. Tokens stay in your Keychain.",
+    a: "No. There is no Houdini account and no Houdini server. Houdini reads the credential already on your machine — your Claude Code OAuth token, or a claude.ai session you sign in to in a native window — and calls the provider directly from your Mac. Tokens stay in your Keychain.",
   },
   {
     q: "Which AI providers does it work with?",
@@ -112,7 +108,7 @@ export const faqs = [
   },
   {
     q: "How does it read my Claude usage?",
-    a: "If you use Claude Code, Houdini reuses its OAuth token from the Keychain — zero new logins. Otherwise you sign in to claude.ai once in a native window and Houdini keeps the session in your Keychain. It then calls the same usage endpoint the official tools do.",
+    a: "If you use Claude Code, Houdini reuses its OAuth token from the Keychain — zero new logins. Otherwise you sign in to claude.ai in a native window; the session is kept in your Keychain and reused until it expires — you'll sign in again when it does. It then calls the same usage endpoint the official tools do.",
   },
   {
     q: "Does it really refresh every 60 seconds?",

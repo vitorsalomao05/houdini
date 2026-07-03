@@ -3,7 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import SectionHeader from "../components/SectionHeader.astro";
 import { reveals } from "../config";
 
-// Tab order mirrors config.reveals: Limits · Sessions · Tokens · Spend. Each tab
+// Tab order mirrors config.reveals: Limits · Sessions · Spend. Each tab
 // reuses the real body copy and pairs it with an on-brand, illustrative render of
 // the product's gauge language (the same green/amber/red thresholds the app uses).
 const tabs = reveals.map((r, i) => ({ ...r, id: r.title.toLowerCase(), i }));
@@ -13,12 +13,11 @@ const limitGauges = [
   { label: "Weekly", pct: 72, bar: "bg-warn", text: "text-warn" },
   { label: "Opus weekly", pct: 91, bar: "bg-danger", text: "text-danger" },
 ];
-const spark = [38, 52, 44, 67, 59, 81, 73];
 ---
 
 <Layout
-  title="What Houdini reveals — Limits, Sessions, Tokens, Spend"
-  description="The four numbers Houdini pulls into the open: your Claude limits, your rolling session window, tokens burned, and extra-usage spend — color-coded and refreshed every 60 seconds."
+  title="What Houdini reveals — Limits, Sessions, Spend"
+  description="The numbers Houdini pulls into the open: your Claude limits, your rolling session window, and extra-usage spend — color-coded and refreshed every 60 seconds."
 >
   <main id="main" tabindex="-1" class="screen relative overflow-hidden px-5 pt-24 sm:px-8 md:pt-20">
     <div
@@ -32,7 +31,7 @@ const spark = [38, 52, 44, 67, 59, 81, 73];
         <SectionHeader
           eyebrow="What it reveals"
           title="Every number your AI keeps backstage."
-          subtitle="Houdini pulls your real limits, timers, and spend into the open — so a throttle or a bill never catches you off guard. Switch between the four."
+          subtitle="Houdini pulls your real limits, timers, and spend into the open — so a throttle or a bill never catches you off guard."
           align="left"
         />
       </div>
@@ -119,25 +118,6 @@ const spark = [38, 52, 44, 67, 59, 81, 73];
                         </svg>
                         <span class="font-mono text-xs text-muted">Resets in 3h 12m</span>
                       </div>
-                    </div>
-                  )}
-
-                  {/* Tokens — burned this window */}
-                  {t.id === "tokens" && (
-                    <div>
-                      <div class="flex items-baseline justify-between">
-                        <span class="text-sm text-muted">This window</span>
-                        <span class="font-display text-3xl font-semibold text-text">1.24M</span>
-                      </div>
-                      <div class="mt-4 flex h-20 items-end gap-1.5" aria-hidden="true">
-                        {spark.map((h) => (
-                          <div
-                            class="flex-1 rounded-t bg-gradient-to-t from-accent/40 to-accent"
-                            style={`height:${h}%`}
-                          />
-                        ))}
-                      </div>
-                      <p class="mt-3 font-mono text-xs text-muted">tokens, kept current to the minute</p>
                     </div>
                   )}
 

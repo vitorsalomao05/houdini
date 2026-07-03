@@ -25,7 +25,7 @@ const panelClass =
 
 <Layout
   title="Install — Houdini"
-  description="A guided setup for Houdini: run one command, connect Claude, choose your surfaces. macOS 14+, Apple Silicon. Nothing leaves your Mac."
+  description="A guided setup for Houdini: run one command, connect Claude, choose your surfaces. macOS 14+, Apple Silicon. No account, no server — your Mac talks only to your provider."
 >
   <main id="main" tabindex="-1" class="flex-1 pt-28 md:pt-24">
     <!-- Header -->
@@ -55,8 +55,9 @@ const panelClass =
         </h1>
         <p data-enter style="--enter-i: 2" class="mt-4 text-lg leading-relaxed text-muted">
           One command installs Houdini, it reuses a login you already have, and
-          your limits appear in the menu bar. No account, no server — nothing
-          leaves your Mac. Step through it below, or read it as one page.
+          your limits appear in the menu bar. No account, no server — your Mac
+          talks only to your provider. Step through it below, or read it as one
+          page.
         </p>
         <p data-enter style="--enter-i: 3" class="mt-3 font-mono text-xs text-muted/80">
           macOS 14 (Sonoma)+ · Apple Silicon · free &amp; open source
@@ -138,10 +139,10 @@ const panelClass =
           it's installed, it's already reading your usage.
         </div>
         <div class={panelClass} data-choice-panel="claude" data-value="no">
-          Open Houdini's settings and sign in to claude.ai once, in a secure
-          native window. The session is stored in your
-          <strong class="text-text">Keychain</strong> and reused — no repeated
-          logins, no secret to paste.
+          Open Houdini's settings and sign in to claude.ai in a secure native
+          window. The session is kept in your
+          <strong class="text-text">Keychain</strong> and reused until it
+          expires — you'll sign in again when it does. No secret to paste.
         </div>
       </StepCard>
 
@@ -262,8 +263,8 @@ const panelClass =
             <span class="mt-0.5 shrink-0 text-spark" aria-hidden="true">✓</span>
             <span>
               <strong class="text-text">Connect Claude.</strong> Open Houdini's
-              settings and sign in to claude.ai once — the session stays in your
-              Keychain.
+              settings and sign in to claude.ai — the session stays in your
+              Keychain until it expires.
             </span>
           </li>
           <li class="flex gap-3" data-recap-when="widget:yes">
@@ -336,7 +337,7 @@ const panelClass =
           Pull your limits into the light.
         </h2>
         <p class="mx-auto mt-3 max-w-md text-muted">
-          One line, no Gatekeeper prompt, nothing leaves your Mac.
+          One line, no Gatekeeper prompt, no account, no server.
         </p>
         <div class="mt-6 flex flex-wrap justify-center gap-3">
           <Button href={links.guide} variant="primary" size="lg">

@@ -25,9 +25,9 @@ const total = steps.length;
 
 // Threshold legend — the product's own gauge language.
 const thresholds = [
-  { dot: "bg-ok", text: "text-ok", range: "0–74%", meaning: "Plenty of headroom. Carry on." },
-  { dot: "bg-warn", text: "text-warn", range: "75–89%", meaning: "Getting close — start pacing the heavy work." },
-  { dot: "bg-danger", text: "text-danger", range: "90–100%", meaning: "About to hit the wall. Check the reset timer." },
+  { dot: "bg-ok", text: "text-ok", range: "0–59%", meaning: "Plenty of headroom. Carry on." },
+  { dot: "bg-warn", text: "text-warn", range: "60–84%", meaning: "Getting close — start pacing the heavy work." },
+  { dot: "bg-danger", text: "text-danger", range: "85–100%", meaning: "About to hit the wall. Check the reset timer." },
 ];
 ---
 
@@ -82,7 +82,7 @@ const thresholds = [
       >
         <p class="text-sm leading-relaxed text-muted">
           Paste this into Terminal and Houdini is installed — no Gatekeeper
-          prompt, nothing leaves your Mac. The rest of this guide explains what
+          prompt, no account, no server. The rest of this guide explains what
           you'll see.
         </p>
         <div class="mt-5">
@@ -143,8 +143,9 @@ const thresholds = [
           <div class="rounded-card border border-border bg-surface/50 p-5">
             <h3 class="font-semibold">People paying per API call</h3>
             <p class="mt-1.5 text-sm leading-relaxed text-muted">
-              You'd rather watch the dollars and tokens add up in real time than
-              find out at the end of the month.
+              You'd rather watch the dollars add up in real time than find out
+              at the end of the month. Houdini is built for this — it arrives
+              with the first API provider.
             </p>
           </div>
         </div>
@@ -238,9 +239,9 @@ const thresholds = [
               <span class="font-mono text-accent-hover">B</span>
               <span>
                 <strong class="text-text">You don't.</strong> Open Houdini's
-                settings and sign in to claude.ai once, in a native window. The
-                session is stored in your Keychain and reused — no repeated
-                logins.
+                settings and sign in to claude.ai in a native window. The
+                session is kept in your Keychain and reused until it expires —
+                you'll sign in again when it does.
               </span>
             </li>
           </ul>
@@ -353,7 +354,9 @@ const thresholds = [
                 <td class="text-muted"
                   >% of each window + reset time + extra-usage $</td
                 >
-                <td class="text-muted">$ spent this period + token counts</td>
+                <td class="text-muted"
+                  >$ spent this period — with the first API provider</td
+                >
               </tr>
               <tr class="bg-surface/20">
                 <th scope="row" class="font-medium text-muted">Connects with</th>
@@ -422,7 +425,7 @@ const thresholds = [
         featured
       >
         <p class="text-muted">
-          One line, no Gatekeeper prompt, nothing leaves your Mac. Pull your
+          One line, no Gatekeeper prompt, no account, no server. Pull your
           limits into the light.
         </p>
         <div class="mt-6 flex flex-wrap gap-3">
