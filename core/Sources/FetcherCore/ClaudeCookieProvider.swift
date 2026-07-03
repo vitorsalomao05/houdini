@@ -31,8 +31,10 @@ public struct ClaudeCookieProvider: UsageProvider {
     /// Reads the `sessionKey` cookie value. Injectable so tests never touch the
     /// Keychain or the network. Default reads Houdini's own Keychain item natively.
     private let sessionKeyReader: @Sendable () throws -> String
+    private let transport: HTTPTransport
 
     public init(store: CredentialStore = CredentialStore()) {
+        self.transport = PinnedURLSession.transport
         self.sessionKeyReader = {
             let data: Data
             do {
@@ -52,9 +54,18 @@ public struct ClaudeCookieProvider: UsageProvider {
         }
     }
 
-    /// Test/escape hatch: inject the cookie value directly (no Keychain, no I/O).
-    init(sessionKeyReader: @escaping @Sendable () throws -> String) {
+    /// Injection seam (tests / the `houdini-selftest` mirror): inject the cookie value
+    /// directly (no Keychain) and optionally a scripted transport (no network). `public`
+    /// for the same reason the `ClaudeOAuthCredentialSource` seam is: the selftest
+    /// executable (plain `import FetcherCore`) must drive these assertions on a
+    /// CommandLineTools-only machine. Defaults keep production behavior identical
+    /// (`PinnedURLSession.transport`).
+    public init(
+        sessionKeyReader: @escaping @Sendable () throws -> String,
+        transport: @escaping HTTPTransport = PinnedURLSession.transport
+    ) {
         self.sessionKeyReader = sessionKeyReader
+        self.transport = transport
     }
 
     public func fetch() async throws -> [UsageMetric] {
@@ -85,9 +96,9 @@ public struct ClaudeCookieProvider: UsageProvider {
         let data: Data
         let response: URLResponse
         do {
-            // Ephemeral, cookie-jar-less, cache-less session (PinnedURLSession); its
-            // redirect guard never lets the sessionKey follow a redirect off claude.ai.
-            (data, response) = try await PinnedURLSession.shared.data(for: request)
+            // Default transport = PinnedURLSession: ephemeral, cookie-jar-less, cache-less;
+            // its redirect guard never lets the sessionKey follow a redirect off claude.ai.
+            (data, response) = try await transport(request)
         } catch {
             throw ProviderError.network(error.localizedDescription)
         }

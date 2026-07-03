@@ -1,5 +1,13 @@
 import Foundation
 
+/// One HTTP round trip (`URLRequest` → `(Data, URLResponse)`). Providers hold this as
+/// an injectable seam — the same closure-seam style as `ClaudeOAuthCredentialSource`'s
+/// `keychainRead` and `ClaudeCookieProvider`'s `sessionKeyReader` — so tests and the
+/// `houdini-selftest` mirror can script status codes and bodies without any network.
+/// Every production caller uses ``PinnedURLSession/transport``, so injecting a fake in
+/// tests never changes what ships.
+public typealias HTTPTransport = @Sendable (URLRequest) async throws -> (Data, URLResponse)
+
 /// The single process-wide `URLSession` every credentialed Houdini request goes
 /// through. It is built from an **ephemeral** configuration with cookie storage
 /// and the disk cache turned off, so a token- or cookie-bearing GET can never
@@ -30,4 +38,10 @@ public enum PinnedURLSession {
             delegateQueue: nil
         )
     }()
+
+    /// The production ``HTTPTransport``: one `data(for:)` round trip through the hardened
+    /// `shared` session above. This is the default for every provider's transport seam,
+    /// so the hardening (ephemeral config, no cookie jar, no cache, 20s ceiling,
+    /// credential-stripping redirect guard) is what ships unless a test injects a fake.
+    public static let transport: HTTPTransport = { try await shared.data(for: $0) }
 }

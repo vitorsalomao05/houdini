@@ -257,9 +257,174 @@ check("cross-site redirect strips credentials",
 check("hostless redirect strips credentials",
       CredentialRedirectGuard.canForwardCredentials(fromHost: "claude.ai", to: nil) == false)
 
+// === Unit C2: provider status mapping + refresh-retry + cookie flow (CORE-09/DX-05) ===
+// Mirrors ProviderTransportTests.swift. The transport is a scripted fake — no network
+// is touched. All credentials are OBVIOUSLY-FAKE placeholders and never printed.
+print("=== provider transport: status mapping + refresh-retry + cookie flow ===")
+
+/// Fake `HTTPTransport`: answers queued `(status, body)` steps in order, records requests.
+final class ScriptedTransport: @unchecked Sendable {
+    private let lock = NSLock()
+    private var script: [(status: Int, body: Data)]
+    private(set) var seen: [URLRequest] = []
+    init(_ script: [(status: Int, body: Data)]) { self.script = script }
+    var requests: [URLRequest] { lock.withLock { seen } }
+    var transport: HTTPTransport {
+        { request in
+            let step: (status: Int, body: Data) = self.lock.withLock {
+                self.seen.append(request)
+                return self.script.isEmpty ? (599, Data()) : self.script.removeFirst()
+            }
+            let http = HTTPURLResponse(url: request.url!, statusCode: step.status,
+                                       httpVersion: "HTTP/1.1", headerFields: nil)!
+            return (step.body, http)
+        }
+    }
+}
+
+let LIVE = "sk-ant-oat01-FAKE-LIVE-C2"
+let COOKIE = "sk-ant-sid01-FAKE-COOKIE-C2"
+
+/// OAuth provider over a scripted transport holding an unexpired fake token
+/// (optional refresh token / refresher). Pinned clientVersion → deterministic UA.
+func oauthProvider(
+    script: [(Int, Data)], refresh: String? = nil,
+    refresher: ClaudeOAuthCredentialSource.Refresher? = nil
+) -> (ClaudeOAuthProvider, ScriptedTransport) {
+    let stub = ScriptedTransport(script)
+    let source = ClaudeOAuthCredentialSource(
+        services: ["only"],
+        keychainRead: { _ in oauthBlobData(access: LIVE, expiresAt: futureMs, refresh: refresh) },
+        refresher: refresher, now: clock)
+    return (ClaudeOAuthProvider(source: source, clientVersion: "0.0.0-test",
+                                transport: stub.transport), stub)
+}
+
+func cookieProvider(script: [(Int, Data)]) -> (ClaudeCookieProvider, ScriptedTransport) {
+    let stub = ScriptedTransport(script)
+    return (ClaudeCookieProvider(sessionKeyReader: { COOKIE },
+                                 transport: stub.transport), stub)
+}
+
+/// Run `body` and check that it throws a ProviderError matching `matches`.
+@MainActor
+func checkThrows(_ name: String, matches: (ProviderError) -> Bool,
+                 _ body: () async throws -> Void) async {
+    do {
+        try await body()
+        check(name, false, "no error thrown")
+    } catch let e as ProviderError {
+        check(name, matches(e), "wrong case: \(e)")
+    } catch {
+        check(name, false, "wrong error type: \(error)")
+    }
+}
+
+func isAuthExpired(_ e: ProviderError) -> Bool { if case .authExpired = e { true } else { false } }
+func isNeedsLogin(_ e: ProviderError) -> Bool { if case .needsLogin = e { true } else { false } }
+func isRateLimited(_ e: ProviderError) -> Bool { if case .rateLimited = e { true } else { false } }
+
+// -- OAuth status mapping --
+await expectNoThrow("OAuth 200 path") {
+    let (p, stub) = oauthProvider(script: [(200, fixture("oauth_usage"))])
+    let metrics = try await p.fetch()
+    check("OAuth 200 → parsed metrics (one request)", metrics == expected && stub.requests.count == 1)
+    let req = stub.requests.first
+    check("OAuth sends Bearer token + claude-code User-Agent",
+          req?.value(forHTTPHeaderField: "Authorization") == "Bearer \(LIVE)"
+          && req?.value(forHTTPHeaderField: "User-Agent") == "claude-code/0.0.0-test")
+}
+await checkThrows("OAuth 401 → authExpired", matches: isAuthExpired) {
+    _ = try await oauthProvider(script: [(401, Data())]).0.fetch()
+}
+await checkThrows("OAuth 403 → authExpired", matches: isAuthExpired) {
+    _ = try await oauthProvider(script: [(403, Data())]).0.fetch()
+}
+await checkThrows("OAuth 429 → rateLimited", matches: isRateLimited) {
+    _ = try await oauthProvider(script: [(429, Data())]).0.fetch()
+}
+await checkThrows("OAuth 5xx → http(status, body snippet)", matches: { e in
+    if case .http(let status, let body) = e { status == 500 && body.contains("boom") } else { false }
+}) {
+    _ = try await oauthProvider(script: [(500, Data("boom".utf8))]).0.fetch()
+}
+
+// -- OAuth 401 → refresh → retry once (fake refresher; production wires none, ADR-012) --
+await expectNoThrow("OAuth live-401 refresh-retry") {
+    let (p, stub) = oauthProvider(script: [(401, Data()), (200, fixture("oauth_usage"))],
+                                  refresh: "sk-ant-ort01-FAKE-C2", refresher: fakeRefresher)
+    let metrics = try await p.fetch()
+    check("OAuth live 401 + refresher → refresh + retry once → metrics",
+          metrics == expected && stub.requests.count == 2
+          && stub.requests.last?.value(forHTTPHeaderField: "Authorization") == "Bearer \(FRESH)")
+}
+do {
+    let (p, stub) = oauthProvider(script: [(401, Data()), (401, Data())],
+                                  refresh: "sk-ant-ort01-FAKE-C2", refresher: fakeRefresher)
+    await checkThrows("OAuth refresh-retry happens exactly once (second 401 → authExpired)",
+                      matches: { isAuthExpired($0) && stub.requests.count == 2 }) {
+        _ = try await p.fetch()
+    }
+}
+do {
+    let (p, stub) = oauthProvider(script: [(401, Data())], refresh: "sk-ant-ort01-FAKE-C2")
+    await checkThrows("OAuth 401 + refreshToken but NO refresher → authExpired, no retry",
+                      matches: { isAuthExpired($0) && stub.requests.count == 1 }) {
+        _ = try await p.fetch()
+    }
+}
+
+// -- Cookie flow: orgs → usage, then status mapping --
+await expectNoThrow("cookie happy flow") {
+    let (p, stub) = cookieProvider(script: [(200, fixture("organizations")),
+                                            (200, fixture("cookie_usage"))])
+    let metrics = try await p.fetch()
+    let expectedCookie = try ClaudeUsageParser.parse(fixture("cookie_usage"),
+                                                     providerId: "claude-cookie")
+    check("cookie flow: orgs → usage of the selected paid org",
+          metrics == expectedCookie && stub.requests.count == 2
+          && stub.requests.first?.url?.absoluteString == "https://claude.ai/api/organizations"
+          && stub.requests.last?.url?.absoluteString
+             == "https://claude.ai/api/organizations/org-paid-0002/usage")
+    check("cookie header sent on both requests",
+          stub.requests.allSatisfy {
+              $0.value(forHTTPHeaderField: "Cookie") == "sessionKey=\(COOKIE)"
+          })
+}
+do {
+    let stub = ScriptedTransport([])
+    let p = ClaudeCookieProvider(sessionKeyReader: { throw ProviderError.needsLogin },
+                                 transport: stub.transport)
+    await checkThrows("missing cookie → needsLogin with zero requests",
+                      matches: { isNeedsLogin($0) && stub.requests.isEmpty }) {
+        _ = try await p.fetch()
+    }
+}
+await checkThrows("cookie 401 → needsLogin", matches: isNeedsLogin) {
+    _ = try await cookieProvider(script: [(401, Data())]).0.fetch()
+}
+await checkThrows("cookie 429 → rateLimited", matches: isRateLimited) {
+    _ = try await cookieProvider(script: [(429, Data())]).0.fetch()
+}
+await checkThrows("cookie 5xx → http(status, body snippet)", matches: { e in
+    if case .http(let status, let body) = e { status == 503 && body.contains("overloaded") } else { false }
+}) {
+    _ = try await cookieProvider(script: [(503, Data("overloaded".utf8))]).0.fetch()
+}
+
 print("---")
+// DX-06 parity guard: the pinned number of checks this mirror must run — currently equal
+// to the @Test count in Tests/FetcherCoreTests (38 baseline + 15 unit-C2 provider checks).
+// Adding/removing a check above (or a mirrored @Test) means updating this pin in the SAME
+// commit; any mismatch fails the run, so silent mirror drift is impossible.
+let pinnedCheckCount = 53
+if checks != pinnedCheckCount {
+    failures += 1
+    print("  ✘ parity — expected exactly \(pinnedCheckCount) checks, ran \(checks) (mirror drift? update the pin)")
+}
+
 if failures == 0 {
-    print("PASS — \(checks) checks")
+    print("PASS — \(checks) checks (pinned \(pinnedCheckCount))")
     exit(0)
 } else {
     print("FAIL — \(failures)/\(checks) checks failed")

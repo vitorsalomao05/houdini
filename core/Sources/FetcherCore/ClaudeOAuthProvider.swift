@@ -50,17 +50,28 @@ public struct ClaudeOAuthProvider: UsageProvider {
 
     private let source: ClaudeOAuthCredentialSource
     private let explicitVersion: String?
+    private let transport: HTTPTransport
 
     public init(store: CredentialStore = CredentialStore(), clientVersion: String? = nil) {
         self.source = ClaudeOAuthCredentialSource(store: store)
         self.explicitVersion = clientVersion
+        self.transport = PinnedURLSession.transport
     }
 
-    /// Injection seam (tests): supply a preconfigured credential source — e.g. one with an
-    /// injected refresher — instead of the default Keychain-backed one.
-    init(source: ClaudeOAuthCredentialSource, clientVersion: String? = nil) {
+    /// Injection seam (tests / the `houdini-selftest` mirror): supply a preconfigured
+    /// credential source — e.g. one with an injected refresher — and/or a scripted
+    /// transport instead of the live one. `public` for the same reason the
+    /// `ClaudeOAuthCredentialSource` seam is: the selftest executable (plain
+    /// `import FetcherCore`) must drive these assertions on a CommandLineTools-only
+    /// machine. Defaults keep production behavior identical (`PinnedURLSession.transport`).
+    public init(
+        source: ClaudeOAuthCredentialSource,
+        clientVersion: String? = nil,
+        transport: @escaping HTTPTransport = PinnedURLSession.transport
+    ) {
         self.source = source
         self.explicitVersion = clientVersion
+        self.transport = transport
     }
 
     public func fetch() async throws -> [UsageMetric] {
@@ -99,9 +110,9 @@ public struct ClaudeOAuthProvider: UsageProvider {
         let data: Data
         let response: URLResponse
         do {
-            // Ephemeral, cookie-jar-less, cache-less session (PinnedURLSession); its
-            // redirect guard never lets the bearer token follow a cross-host redirect.
-            (data, response) = try await PinnedURLSession.shared.data(for: request)
+            // Default transport = PinnedURLSession: ephemeral, cookie-jar-less, cache-less;
+            // its redirect guard never lets the bearer token follow a cross-host redirect.
+            (data, response) = try await transport(request)
         } catch {
             throw ProviderError.network(error.localizedDescription)
         }
