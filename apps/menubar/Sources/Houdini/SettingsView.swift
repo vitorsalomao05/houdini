@@ -60,6 +60,14 @@ struct SettingsView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
+
+            section("About") {
+                row("Version") {
+                    Text(Self.appVersion)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
         .padding(22)
         .frame(width: 360)
@@ -192,6 +200,14 @@ struct SettingsView: View {
         .toggleStyle(.switch)
         .tint(.green)
     }
+
+    // MARK: - About
+
+    /// Marketing version from the bundle (`CFBundleShortVersionString`, set in
+    /// Info.plist and copied into the .app by build.sh). Bare-binary runs (the
+    /// smoke-test flags) have no bundle plist, so they read "dev".
+    static let appVersion: String =
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
 
     // MARK: - Pieces
 
