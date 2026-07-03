@@ -1,0 +1,144 @@
+name: CI
+
+# Push/PR verification baseline (DX-03/04/07, PER-05). The primary dev machine
+# is CommandLineTools-only, where `swift test` exits 0 having executed ZERO
+# tests (the swift-testing runner no-ops) — so this workflow is where the test
+# suite actually runs. Toolchain choices mirror release.yml (macos-26 arm64
+# runners ship Xcode 26 / the macOS 26 SDK) so CI verifies the same artifacts
+# a release would ship.
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Job 1 — the FetcherCore test suite, executed for real (DX-03/04).
+  core:
+    name: core — swift test + selftest
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Select an Xcode 26 toolchain
+        run: |
+          set -euo pipefail
+          XC="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)"
+          [ -n "$XC" ] || XC="$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          echo "Using $XC"
+          sudo xcode-select -s "$XC"
+          swift --version
+
+      - name: swift test (must actually execute tests)
+        working-directory: core
+        run: |
+          set -euo pipefail
+          LOG="$RUNNER_TEMP/swift-test.log"
+          swift test 2>&1 | tee "$LOG"
+          # swift test exits 0 having run ZERO tests on a CLT-only toolchain
+          # (DX-03) — assert the suite actually executed here. No pinned test
+          # count: the suite grows.
+          grep -E 'Test run with [1-9][0-9]* test' "$LOG" \
+            || { echo "::error::swift test executed no tests — silent green refused"; exit 1; }
+
+      - name: houdini-selftest (mirrored assertions, real exit code)
+        working-directory: core
+        run: swift run houdini-selftest
+
+  # Job 2 — the menu bar app builds and its smoke flags pass (DX-07).
+  app:
+    name: app — build + smoke (--metrictest, --widgettest)
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Select an Xcode 26 toolchain (macOS 26 SDK required)
+        run: |
+          set -euo pipefail
+          XC="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)"
+          [ -n "$XC" ] || XC="$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          echo "Using $XC"
+          sudo xcode-select -s "$XC"
+          swift --version
+          SDK="$(xcrun --show-sdk-version)"
+          echo "macOS SDK: $SDK"
+          # Same hard gate as release.yml: an older SDK still compiles the app
+          # but silently drops Liquid Glass (WidgetGlass.swift's compile-time
+          # guard) — CI must verify what a release would ship.
+          [ "${SDK%%.*}" -ge 26 ] || { echo "::error::macOS SDK $SDK < 26 — not what a release ships"; exit 1; }
+
+      - name: Build menu bar app (ad-hoc, hardened runtime)
+        working-directory: apps/menubar
+        run: ./build.sh release
+
+      - name: Smoke — built binary (--metrictest, --widgettest)
+        run: |
+          set -euo pipefail
+          BIN="apps/menubar/build/Houdini.app/Contents/MacOS/Houdini"
+          # --metrictest: known-answer assertions on the menu-bar strings
+          # (deterministic PreviewData; exits non-zero on any mismatch).
+          "$BIN" --metrictest
+          # --widgettest: real checks with a genuine pass/fail exit code. It
+          # exits 0 with a "no display available" note on a headless machine —
+          # treat that skip as a failure so verification can't be silently
+          # green (MB-08).
+          LOG="$RUNNER_TEMP/widgettest.log"
+          "$BIN" --widgettest 2>&1 | tee "$LOG"
+          if grep -q "no display available" "$LOG"; then
+            echo "::error::--widgettest skipped (no WindowServer on runner) — verification not green"
+            exit 1
+          fi
+
+  # Job 3 — the site builds (DX-04).
+  site:
+    name: site — astro build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: npm ci + build
+        working-directory: site
+        run: |
+          npm ci
+          npm run build
+
+  # Job 4 — FetcherCore (the library only) compiles for the iOS Simulator,
+  # keeping README's "iOS-compilable" claim true cheaply (PER-05). The iOS app
+  # itself is an unbuilt scaffold (ADR-008) and is deliberately NOT built.
+  ios-lib:
+    name: core — FetcherCore compiles for iOS Simulator
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Select an Xcode 26 toolchain
+        run: |
+          set -euo pipefail
+          XC="$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1 || true)"
+          [ -n "$XC" ] || XC="$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          echo "Using $XC"
+          sudo xcode-select -s "$XC"
+
+      - name: xcodebuild FetcherCore (scheme = library product only)
+        working-directory: core
+        run: |
+          set -euo pipefail
+          xcodebuild -list
+          xcodebuild build -quiet \
+            -scheme FetcherCore \
+            -destination "generic/platform=iOS Simulator" \
+            -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGNING_ALLOWED=NO
