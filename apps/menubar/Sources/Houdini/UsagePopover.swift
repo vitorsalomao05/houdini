@@ -57,6 +57,17 @@ struct UsagePopover: View {
         // navigable (nothing hidden).
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Claude usage")
+        .onAppear {
+            // Opening the popover while signed-out or in an error state re-checks for a
+            // Claude credential right away (e.g. the user logged into Claude Code after
+            // installing Houdini) instead of waiting for the next timer tick — `refreshNow()`
+            // does the signed-out/error re-resolve. Guarded by `resolvesAuthLive`: the
+            // headless `--snapshot` preview models have no resolver, so this never kicks a
+            // fetch during offscreen rendering.
+            if model.resolvesAuthLive, model.state.isSignedOut || model.state.isError {
+                model.refreshNow()
+            }
+        }
     }
 
     // MARK: - Header

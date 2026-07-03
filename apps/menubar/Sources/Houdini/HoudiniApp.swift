@@ -16,11 +16,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let launch = LaunchAtLogin()
     /// Claude auth state (Claude Code token → claude.ai cookie → signed out).
     lazy var session = ClaudeSession(settings: settings)
-    /// The model reads its interval from `settings` and resolves its provider from
-    /// `session` on every fetch, so auth changes apply without a restart.
+    /// The model reads its interval from `settings` and reads its provider from `session`
+    /// on every fetch, so auth changes apply without a restart. While signed-out / in an
+    /// error state it also asks `session` to re-read the Keychain (`reresolveAuth`), so a
+    /// credential that appears (or expires) after launch is picked up without a relaunch.
     lazy var model = UsageModel(
         settings: settings,
-        resolveProvider: { [weak self] in self?.session.currentProvider }
+        resolveProvider: { [weak self] in self?.session.currentProvider },
+        reresolveAuth: { [weak self] in self?.session.refresh() }
     )
     /// Floating desktop widget (NSPanel). Shares the model/session, so it tracks the
     /// same 60s refresh and auth state as the menu bar. Observes `showDesktopWidget`.

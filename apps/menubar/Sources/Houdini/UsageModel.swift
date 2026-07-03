@@ -24,10 +24,15 @@ final class UsageModel: ObservableObject {
     @Published private(set) var needsLogin = false
 
     private let provider: any UsageProvider
-    /// When set, the active provider is resolved fresh on each fetch (so sign-in/out
-    /// and the prefer-cookie toggle take effect immediately). `nil` → signed out.
-    /// When unset, the fixed `provider` above is used (previews / self-tests).
+    /// When set, the active provider is read from the session's cache on each fetch (so
+    /// sign-in/out and the prefer-cookie toggle take effect immediately). `nil` → signed
+    /// out. When unset, the fixed `provider` above is used (previews / self-tests).
     private let resolveProvider: (@MainActor () -> (any UsageProvider)?)?
+    /// Optional self-heal: re-read the Keychain for a credential that appeared or expired
+    /// while Houdini was already running. Invoked from `refreshNow()` ONLY in the
+    /// signed-out / error states (never on healthy ticks), so "install Houdini, then log
+    /// into Claude Code" is picked up without a relaunch. `nil` for previews / self-tests.
+    private let reresolveAuth: (@MainActor () -> Void)?
     /// Live, not constant — Settings can change it and the timer reschedules.
     private(set) var refreshInterval: TimeInterval
     private var timer: Timer?
@@ -41,9 +46,11 @@ final class UsageModel: ObservableObject {
     init(provider: any UsageProvider = ClaudeOAuthProvider(),
          refreshInterval: TimeInterval = 60,
          settings: AppSettings? = nil,
-         resolveProvider: (@MainActor () -> (any UsageProvider)?)? = nil) {
+         resolveProvider: (@MainActor () -> (any UsageProvider)?)? = nil,
+         reresolveAuth: (@MainActor () -> Void)? = nil) {
         self.provider = provider
         self.resolveProvider = resolveProvider
+        self.reresolveAuth = reresolveAuth
         self.refreshInterval = settings?.refreshInterval ?? refreshInterval
 
         // Mirror the user's interval choice live: when Settings publishes a new
@@ -108,8 +115,23 @@ final class UsageModel: ObservableObject {
         timer = t
     }
 
+    /// True only for the live app model (a resolver is wired). The popover reads it to
+    /// avoid kicking a real fetch / re-resolve from the headless `--snapshot` preview
+    /// models, which have no resolver.
+    var resolvesAuthLive: Bool { resolveProvider != nil }
+
     /// Fetch once now. Safe to call from the Refresh button or the timer.
     func refreshNow() {
+        // Auth self-heal: only while signed-out or in an error state, ask the session to
+        // re-read the Keychain so a Claude credential that appeared (or expired) while the
+        // app was already running is picked up without a relaunch. Deliberately skipped on
+        // healthy / loading ticks so steady-state polling never spawns extra `security`
+        // reads — a fully signed-out re-resolve costs up to ~6 short `/usr/bin/security`
+        // spawns (3 usability checks × 2 candidate Keychain items). Re-entrancy is bounded
+        // by `ClaudeSession.refresh()`, which fires its change callback only on an actual
+        // outcome change (see there).
+        if state.isSignedOut || state.isError { reresolveAuth?() }
+
         // Auth-aware: when a resolver is wired, pick the current provider each time
         // so sign-in/out and the prefer-cookie toggle apply without a restart.
         let activeProvider: (any UsageProvider)? = resolveProvider.map { $0() } ?? provider

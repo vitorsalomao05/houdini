@@ -24,13 +24,17 @@ final class ClaudeSession: ObservableObject {
     var onAuthChange: (() -> Void)?
 
     private let settings: AppSettings
-    private let resolver = ClaudeAuthResolver()
+    private let resolver: ClaudeAuthResolver
     private let store = CredentialStore()
     private var loginController: ClaudeLoginWindowController?
     private var cancellables = Set<AnyCancellable>()
 
-    init(settings: AppSettings) {
+    /// `resolver` is injectable purely as a testing seam (`--authtest`): a fake, in-memory
+    /// credential source can be supplied so re-resolution is exercised without touching the
+    /// real Keychain. Production always uses the default (real) resolver.
+    init(settings: AppSettings, resolver: ClaudeAuthResolver = ClaudeAuthResolver()) {
         self.settings = settings
+        self.resolver = resolver
         refresh()
         // Re-resolve when the user flips the prefer-cookie escape hatch.
         settings.$preferCookieAuth
@@ -40,13 +44,24 @@ final class ClaudeSession: ObservableObject {
             .store(in: &cancellables)
     }
 
-    /// Re-read credentials, recompute the active provider, and notify the owner.
+    /// Re-read credentials, recompute the active provider, and notify the owner —
+    /// but ONLY when the resolved outcome actually changed. Gating the callback is what
+    /// makes re-resolution safe to drive from the poll loop: `UsageModel`'s signed-out /
+    /// error re-resolve calls back here, and `onAuthChange` re-enters `reloadAuth()` →
+    /// `refreshNow()` → (re-resolve) → `refresh()`; firing it unconditionally on an
+    /// unchanged signed-out tick would recurse forever. The "outcome" is the pair
+    /// (active-auth kind, provider present?) — enough to know a credential appeared,
+    /// vanished, or swapped kinds so a re-fetch is warranted.
     func refresh() {
+        let previousAuth = activeAuth
+        let hadProvider = currentProvider != nil
         hasOAuthToken = resolver.hasUsableOAuthToken()
         hasCookie = resolver.hasSessionCookie()
         activeAuth = resolver.resolve(preferCookie: settings.preferCookieAuth)
         currentProvider = resolver.makeProvider(preferCookie: settings.preferCookieAuth)
-        onAuthChange?()
+        if activeAuth != previousAuth || (currentProvider != nil) != hadProvider {
+            onAuthChange?()
+        }
     }
 
     /// Open the WebView login. On success the captured cookie is stored, then auth

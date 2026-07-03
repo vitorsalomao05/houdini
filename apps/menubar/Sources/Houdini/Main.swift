@@ -28,6 +28,10 @@ enum Main {
             SelfTest.launchTest()
             return
         }
+        if args.contains("--authtest") {
+            AuthTest.run()
+            return
+        }
         // Headless login-item toggles used by install.sh (offer at install,
         // cleanup at uninstall) — same SMAppService path as the Settings toggle.
         if args.contains("--register-login-item") {
