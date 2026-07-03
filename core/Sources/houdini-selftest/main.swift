@@ -229,6 +229,34 @@ check("stale-but-refreshable OAuth preferred over cookie ⇒ .oauth",
 check("expired + no refresh, cookie present ⇒ demote to cookie",
       testResolver(oauthBlob: oauthBlobData(access: "sk-ant-oat01-FAKE", expiresAt: pastMs), cookie: true).resolve() == .cookie)
 
+// === Unit B2: redirect-guard host + scheme decision (SEC-01 / CORE-07) ===
+// Mirrors HTTPRedirectGuardTests.swift. Pure host/scheme logic — no network, no
+// credentials, no token values printed. Proves credential headers are forwarded
+// ONLY across a same-site HTTPS redirect and stripped on a cross-site hop, a
+// lookalike host, or an https→http downgrade.
+print("=== redirect guard (sameSite + scheme) ===")
+check("exact host is same-site",
+      CredentialRedirectGuard.sameSite("claude.ai", "claude.ai"))
+check("subdomain → base is same-site",
+      CredentialRedirectGuard.sameSite("api.claude.ai", "claude.ai"))
+check("base → subdomain is same-site",
+      CredentialRedirectGuard.sameSite("claude.ai", "api.claude.ai"))
+check("evil-claude.ai lookalike is NOT same-site",
+      CredentialRedirectGuard.sameSite("evil-claude.ai", "claude.ai") == false)
+check("unrelated host is NOT same-site",
+      CredentialRedirectGuard.sameSite("example.com", "claude.ai") == false)
+check("same-site https redirect forwards credentials",
+      CredentialRedirectGuard.canForwardCredentials(
+        fromHost: "claude.ai", to: URL(string: "https://claude.ai/api/organizations")))
+check("https→http downgrade strips credentials",
+      CredentialRedirectGuard.canForwardCredentials(
+        fromHost: "claude.ai", to: URL(string: "http://claude.ai/api/organizations")) == false)
+check("cross-site redirect strips credentials",
+      CredentialRedirectGuard.canForwardCredentials(
+        fromHost: "claude.ai", to: URL(string: "https://evil-claude.ai/api")) == false)
+check("hostless redirect strips credentials",
+      CredentialRedirectGuard.canForwardCredentials(fromHost: "claude.ai", to: nil) == false)
+
 print("---")
 if failures == 0 {
     print("PASS — \(checks) checks")

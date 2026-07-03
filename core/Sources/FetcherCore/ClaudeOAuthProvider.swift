@@ -99,10 +99,9 @@ public struct ClaudeOAuthProvider: UsageProvider {
         let data: Data
         let response: URLResponse
         do {
-            // Redirect guard: never let the bearer token follow a cross-host redirect.
-            (data, response) = try await URLSession.shared.data(
-                for: request, delegate: CredentialRedirectGuard.shared
-            )
+            // Ephemeral, cookie-jar-less, cache-less session (PinnedURLSession); its
+            // redirect guard never lets the bearer token follow a cross-host redirect.
+            (data, response) = try await PinnedURLSession.shared.data(for: request)
         } catch {
             throw ProviderError.network(error.localizedDescription)
         }

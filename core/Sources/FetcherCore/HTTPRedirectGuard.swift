@@ -1,25 +1,26 @@
 import Foundation
 
-/// Per-request `URLSession` delegate that strips credential headers (`Cookie`,
-/// `Authorization`) from any **cross-site** HTTP redirect. Foundation's default
-/// redirect handling copies a manually-set `Cookie`/`Authorization` header onto
-/// the redirected request even when it targets a different host — so a redirect
-/// to an unexpected origin could leak the session cookie or bearer token. This
-/// guard keeps headers on same-site redirects and removes them otherwise.
+/// `URLSession` delegate that strips credential headers (`Cookie`,
+/// `Authorization`) from any redirect that isn't a **same-site HTTPS** hop.
+/// Foundation's default redirect handling copies a manually-set
+/// `Cookie`/`Authorization` header onto the redirected request even when it
+/// targets a different host — or downgrades the scheme to cleartext `http` — so
+/// an unexpected redirect could leak the session cookie or bearer token. This
+/// guard keeps headers only when the target is the same registrable site *and*
+/// still HTTPS, and removes them otherwise.
 ///
-/// Use via `URLSession.shared.data(for:delegate:)`. Stateless → safe to share.
-final class CredentialRedirectGuard: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+/// Wired in as the delegate of ``PinnedURLSession`` (process-wide). Stateless →
+/// safe to share as a singleton.
+public final class CredentialRedirectGuard: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
     static let shared = CredentialRedirectGuard()
 
-    func urlSession(_ session: URLSession,
-                    task: URLSessionTask,
-                    willPerformHTTPRedirection response: HTTPURLResponse,
-                    newRequest request: URLRequest,
-                    completionHandler: @escaping (URLRequest?) -> Void) {
-        let originalHost = task.originalRequest?.url?.host
-        let newHost = request.url?.host
-        if let originalHost, let newHost, Self.sameSite(originalHost, newHost) {
-            completionHandler(request) // same site → preserve headers
+    public func urlSession(_ session: URLSession,
+                           task: URLSessionTask,
+                           willPerformHTTPRedirection response: HTTPURLResponse,
+                           newRequest request: URLRequest,
+                           completionHandler: @escaping (URLRequest?) -> Void) {
+        if Self.canForwardCredentials(fromHost: task.originalRequest?.url?.host, to: request.url) {
+            completionHandler(request) // same site, still HTTPS → preserve headers
         } else {
             var stripped = request
             stripped.setValue(nil, forHTTPHeaderField: "Cookie")
@@ -28,9 +29,22 @@ final class CredentialRedirectGuard: NSObject, URLSessionTaskDelegate, @unchecke
         }
     }
 
+    /// Whether the `Cookie` / `Authorization` headers may ride a redirect from
+    /// `originalHost` to `newURL`. Both conditions must hold: the target is the
+    /// same registrable site, **and** the target is still HTTPS (no `https`→`http`
+    /// downgrade). Any missing host/scheme falls through to `false` (strip).
+    public static func canForwardCredentials(fromHost originalHost: String?, to newURL: URL?) -> Bool {
+        guard let originalHost,
+              let newHost = newURL?.host,
+              sameSite(originalHost, newHost),
+              newURL?.scheme?.lowercased() == "https"
+        else { return false }
+        return true
+    }
+
     /// Same registrable site: identical hosts, or one a subdomain of the other.
     /// Conservative — anything else falls through to header stripping.
-    static func sameSite(_ a: String, _ b: String) -> Bool {
+    public static func sameSite(_ a: String, _ b: String) -> Bool {
         a == b || a.hasSuffix("." + b) || b.hasSuffix("." + a)
     }
 }

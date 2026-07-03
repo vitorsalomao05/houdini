@@ -85,10 +85,9 @@ public struct ClaudeCookieProvider: UsageProvider {
         let data: Data
         let response: URLResponse
         do {
-            // Redirect guard: never let the cookie follow a redirect off claude.ai.
-            (data, response) = try await URLSession.shared.data(
-                for: request, delegate: CredentialRedirectGuard.shared
-            )
+            // Ephemeral, cookie-jar-less, cache-less session (PinnedURLSession); its
+            // redirect guard never lets the sessionKey follow a redirect off claude.ai.
+            (data, response) = try await PinnedURLSession.shared.data(for: request)
         } catch {
             throw ProviderError.network(error.localizedDescription)
         }
