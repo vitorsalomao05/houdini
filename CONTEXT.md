@@ -13,8 +13,8 @@ Houdini is a **local-first macOS app** (macOS 14+, Apple Silicon) that reveals a
   panel (SwiftUI in an `NSPanel`), native to the app. ~60s refresh.
 
 **Claude (Pro/Max) is live today**: 5-hour and weekly limits, reset timers, and any
-extra-usage spend, refreshed about every 60 seconds. **OpenAI, Google Gemini, and the
-Anthropic Console are on the roadmap** (see `PROVIDERS.md` / `ROADMAP.md`).
+extra-usage spend, refreshed about every 60 seconds. **OpenAI and the Anthropic
+Console are on the roadmap** (see `PROVIDERS.md` / `ROADMAP.md`).
 
 The core mechanism: Houdini reads the user's *existing* credential (Keychain OAuth token
 or session cookie) and calls each provider's **JSON usage endpoint directly** — no bundled

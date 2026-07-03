@@ -7,8 +7,8 @@
 
 Houdini is a multi-provider platform for AI usage + cost on macOS. **Claude
 (Pro/Max) is live today** — your 5-hour and weekly limits, reset timers, and
-any extra-usage spend, refreshed about **every 60 seconds**. OpenAI, Gemini, and
-the Anthropic Console are on the roadmap. No account, no server; credentials stay
+any extra-usage spend, refreshed about **every 60 seconds**. OpenAI and the
+Anthropic Console are on the roadmap. No account, no server; credentials stay
 in your Keychain.
 
 ## Install (macOS 14+, Apple Silicon)
@@ -47,7 +47,6 @@ The background-browser scrape survives only as a **last-resort fallback adapter*
 |---|---|---|---|
 | **Claude (Pro/Max)** | `api.anthropic.com/api/oauth/usage` (Claude Code OAuth token in Keychain) **or** `claude.ai/api/organizations/{org}/usage` (session cookie) | JSON | **Live** |
 | **OpenAI Platform** (API usage/cost) | `/v1/organization/usage/*`, `/v1/organization/costs` | JSON (admin key) | Planned |
-| **Google Gemini** (API usage/cost) | API usage endpoints | JSON (API key) | Planned |
 | **Anthropic Console** (API usage/cost) | Admin API `usage_report` / `cost_report` | JSON (admin key) | Planned |
 
 See [`PROVIDERS.md`](PROVIDERS.md) for the full adapter contract and per-provider specs (including the experimental ChatGPT-Plus path), [`ARCHITECTURE.md`](ARCHITECTURE.md) for the system design, [`DECISIONS.md`](DECISIONS.md) for the ADRs, and [`ROADMAP.md`](ROADMAP.md) for the phased plan.

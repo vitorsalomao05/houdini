@@ -14,7 +14,6 @@
   "providers": [
     { "id": "claude",            "name": "Claude (Pro/Max)",   "status": "live",         "source": "api.anthropic.com/api/oauth/usage (Claude Code OAuth token in Keychain) OR claude.ai/api/organizations/{org}/usage (session cookie)", "method": "JSON" },
     { "id": "openai-platform",   "name": "OpenAI Platform",    "status": "planned",      "source": "/v1/organization/usage/*, /v1/organization/costs",                                                                            "method": "JSON (organization admin key, stored only in Keychain — ADR-011)" },
-    { "id": "google-gemini",     "name": "Google Gemini",      "status": "planned",      "source": "API usage endpoints",                                                                                                        "method": "JSON (API key)" },
     { "id": "anthropic-console", "name": "Anthropic Console",  "status": "planned",      "source": "Admin API usage_report / cost_report",                                                                                       "method": "JSON (admin key)" },
     { "id": "chatgpt-plus",      "name": "ChatGPT Plus",       "status": "experimental", "source": "experimental ChatGPT-Plus path (see PROVIDERS.md)",                                                                           "method": "best-effort (ADR-004)" }
   ],

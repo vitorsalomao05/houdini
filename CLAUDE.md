@@ -7,7 +7,7 @@
 ## What Houdini is (one line)
 
 A local-first **macOS app** that reveals your AI usage and spend — in the menu bar and
-on the desktop. **Claude (Pro/Max) is live today**; OpenAI, Gemini, and Anthropic
+on the desktop. **Claude (Pro/Max) is live today**; OpenAI and the Anthropic
 Console are on the roadmap. No account, no server — credentials stay in the Keychain.
 
 Pitch we lead with on the site: *"See your Claude spend at a glance, right from your
@@ -154,7 +154,8 @@ repo map + real commands + the top BACKLOG item.
 - **ROADMAP.md staleness — RESOLVED 2026-07-01:** ROADMAP **refreshed** — Phase 7 corrected to
   Vercel, the ADR-010/011-forbidden "providers grid" dropped, and the stale ✅ / "← WE ARE HERE"
   markers updated now that v0.4.0 is live.
-- **Google Gemini (still open):** advertised in `README.md`/`CONTEXT.md` as a planned provider but
-  has **no entry in `PROVIDERS.md` or `ROADMAP.md`** — either spec it or drop the claim.
-- **Übersicht (still open):** referenced as a live surface in ADR-002/ADR-003 but was removed —
-  historical ADR text, flag on next ADR revision.
+- **Google Gemini — RESOLVED 2026-07-03 (v1 audit, A0):** the claim was **dropped** from
+  `README.md`/`CONTEXT.md`/`CLAUDE.md`/`feature_list.json` (DOC-04). Re-add only once a real
+  `PROVIDERS.md` spec + ROADMAP phase exist.
+- **Übersicht — RESOLVED 2026-07-03 (v1 audit, A0):** ADR-002/ADR-003 revised in place —
+  Übersicht is recorded as historical; ADR-013 fixes the NSPanel desktop-surface decision.
