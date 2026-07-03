@@ -46,7 +46,10 @@ The single source of truth for data. No UI. Exposes:
   adapters: `ClaudeOAuthProvider` (`"claude"`) and `ClaudeCookieProvider` (`"claude-cookie"`).
   `ClaudeAuthResolver` picks between them at runtime based on which credential is present.
 - `CredentialStore` — reads/writes secrets in the macOS Keychain (native `SecItem` calls, plus a
-  `/usr/bin/security` CLI path for items whose ACL would otherwise require a prompt).
+  `/usr/bin/security` CLI path for items whose ACL would otherwise require a prompt). Items Houdini
+  itself writes (e.g. the `Houdini-claude-session` cookie) use `kSecAttrAccessibleAfterFirstUnlock`
+  — deliberate, so the launch-at-login agent can read them without a prompt, accepting that the
+  item is decryptable while the Mac is locked once unlocked after boot (audit SEC-09).
 - `ClaudeOAuthCredentialSource` — OAuth credential discovery, tried in order: Keychain item
   `"Claude Code-credentials"` (primary), then the classic `"Claude Code"` item, then the
   `~/.claude/.credentials.json` file. Refreshes a stale token **in memory only**.
