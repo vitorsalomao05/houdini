@@ -73,7 +73,7 @@ struct HoudiniWidgetEntryView: View {
             Text("Claude usage").font(.caption2).foregroundStyle(.secondary)
             if let m = metric, let pct = m.pct {
                 Text("\(m.label) · \(Int(pct.rounded()))%").font(.headline)
-                Gauge(value: pct, in: 0...100) { EmptyView() }
+                Gauge(value: min(max(pct, 0), 100), in: 0...100) { EmptyView() }
                     .gaugeStyle(.accessoryLinearCapacity)
             } else {
                 Text("Open Houdini to sign in").font(.caption)

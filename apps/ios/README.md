@@ -55,5 +55,7 @@ apps/ios/
 
 Xcode, the **$99/yr** Apple Developer Program, and a confirmed Team ID / bundle-ID
 prefix. None can be produced on this CommandLineTools-only Mac. The core
-(`../../core`) **is** already iOS-ready and its macOS build still passes — that part
-is done and verified.
+(`../../core`) is iOS-compilable **by construction** — its `#if os(macOS)` guards were
+verified by inspection and its macOS build still passes — but the **iOS compile itself
+is unverified** (no iOS SDK here); it stays a documented assumption until a real Xcode
+build runs. See [`PLAN.md`](./PLAN.md) §5.

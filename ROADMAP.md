@@ -49,7 +49,7 @@ Docs (README, ARCHITECTURE, DECISIONS, PROVIDERS, WORKFLOW — the last since me
 
 ## Phase 9 — Mobile: Houdini for iPhone (iOS)  — NEW DIRECTION
 See `apps/ios/PLAN.md` and `DECISIONS.md` ADR-008. Native iOS app (no PWA — CORS + httpOnly cookie + the "no server sees your creds" promise rule it out).
-- **FetcherCore iOS-ready** ✅ — only macOS-only dep was `Foundation.Process`; guarded behind `#if os(macOS)`, macOS build unchanged. Cookie path (`ClaudeCookieProvider` + `ClaudeUsageParser`) reused verbatim.
+- **FetcherCore iOS-ready** `[~]` (by construction — guards verified by inspection, macOS build unchanged; the iOS compile itself is *unverified*, no iOS SDK here — see `apps/ios/PLAN.md` §5) — only macOS-only dep was `Foundation.Process`; guarded behind `#if os(macOS)`. Cookie path (`ClaudeCookieProvider` + `ClaudeUsageParser`) reused verbatim.
 - **App scaffold** ✅ (source only — *not* compiled; needs Xcode) — SwiftUI app + `UsageViewModel`, in-app `WKWebView` claude.ai login → capture `sessionKey` → iOS Keychain → native `URLSession` fetch.
 - **WidgetKit** — Home Screen + Lock Screen widgets reading the App Group cached snapshot; honest ~15–30 min refresh ("updated X min ago"), **not** 60s (same Apple budget as Phase 4 / ADR-002).
 - **Distribution** — needs **Apple Developer Program ($99/yr) + Xcode**; TestFlight (beta) → App Store. No free install-by-link on iOS (unlike the Mac app).

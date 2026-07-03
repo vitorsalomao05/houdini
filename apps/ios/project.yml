@@ -37,6 +37,7 @@ targets:
     dependencies:
       - package: FetcherCore
         product: FetcherCore
+      - target: HoudiniWidget   # app embeds the widget extension (XcodeGen embeds app-extension deps)
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.salomao.houdini.mobile
@@ -56,7 +57,6 @@ targets:
     dependencies:
       - package: FetcherCore
         product: FetcherCore
-      - target: HoudiniMobile     # extension is embedded in the app
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.salomao.houdini.mobile.widget
