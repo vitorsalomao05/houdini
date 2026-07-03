@@ -18,7 +18,6 @@ Mac's menu bar."*
 ```
 core/            FetcherCore Swift package (shared data layer) + `houdini` / `houdini-selftest` CLI
 apps/menubar/    SwiftUI menu bar app + native desktop widget (flagship) — SPM exe wrapped by build.sh
-apps/widget/     WidgetKit Notification Center widget — README-only placeholder today (unadvertised, ADR-002)
 apps/ios/        Native iOS app + widget scaffold (cookie auth, XcodeGen; not yet built — ADR-008)
 site/            Astro + Tailwind landing page (houdini.salomao.org; deploys via Vercel)
 install.sh       one-liner installer (SHA-256-verified download from a pinned Release)

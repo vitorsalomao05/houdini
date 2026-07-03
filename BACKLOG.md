@@ -184,7 +184,8 @@ version, and reports the new version to the user.
       from `README.md`/`CONTEXT.md`/`CLAUDE.md`. Re-add only once a real `PROVIDERS.md` spec +
       ROADMAP phase exist.
 - [x] **README/CLAUDE repo-layout — done:** `apps/ios/` added to the layout maps (`CLAUDE.md` +
-      README); `apps/widget/` documented as a README-only placeholder, not a built target.
+      README); `apps/widget/` documented as a README-only placeholder, not a built target
+      *(the placeholder dir was later deleted, 2026-07-03, per ADR-013 — v1 audit Phase D)*.
 
 ## Immediate next steps
 

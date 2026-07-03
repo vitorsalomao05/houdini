@@ -68,7 +68,6 @@ houdini/
 ├── core/                ← FetcherCore Swift package (shared data layer) + `houdini` CLI
 ├── apps/
 │   ├── menubar/         ← SwiftUI menu bar app + native desktop widget (flagship)
-│   ├── widget/          ← WidgetKit Notification Center widget (placeholder today; unadvertised)
 │   └── ios/             ← native iOS app + widget scaffold (cookie auth; not yet built — ADR-008)
 ├── site/                ← Astro + Tailwind landing page (deploys via Vercel)
 ├── install.sh           ← one-liner installer (verified download from Releases)

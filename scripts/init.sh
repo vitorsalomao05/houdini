@@ -60,7 +60,6 @@ h "Repo map"
 cat <<'MAP'
     core/            FetcherCore Swift package (shared data layer) + `houdini` CLI
     apps/menubar/    SwiftUI MenuBarExtra app + native desktop widget (flagship)
-    apps/widget/     WidgetKit Notification Center widget (doc placeholder; ~15min, unadvertised — ADR-002)
     apps/ios/        Native iOS app scaffold (cookie auth, reuses FetcherCore — ADR-008)
     site/            Astro + Tailwind landing page (houdini.salomao.org, deploys via Vercel)
     scripts/         developer bootstrap (this script) — release automation lives in .github/workflows/release.yml
