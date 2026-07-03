@@ -1,10 +1,17 @@
 # Release checklist
 
-The rule (ADR-010): **production carries exactly one advertised version.** Every
-production release bumps, publishes the new one, and **prunes every obsolete
-release, tag, and installer**. The site, `README`, and the install one-liner
-reference only the current version. No "coming soon" placeholders ship to
-production — a surface is real and shown, or absent.
+The rule (ADR-010, revised 2026-07-03): **production advertises exactly one
+version.** Every production release bumps, publishes the new one via CI, and
+**prunes the *pointers*** (site, `README`, one-liner) so they reference only the
+current version. Superseded releases and their tags are **kept** — retitled
+"superseded — do not install" — so rollback and `houdini update` stay possible.
+No "coming soon" placeholders ship to production — a surface is real and shown,
+or absent.
+
+**Publishing is CI's job.** `.github/workflows/release.yml` is the sole
+publisher: it builds, verifies (core `swift test`, `houdini-selftest`,
+built-binary `--metrictest`/`--widgettest`), checksums, and publishes on a
+`vX.Y.Z` tag push. The manual role is to bump, tag, watch, and verify.
 
 Replace `X.Y.Z` with the new version (and `P.Q.R` with the previous one).
 
@@ -66,41 +73,59 @@ from the new release, SHA-256 match, idempotent re-run.
 ---
 
 ## 1 · Pre-flight
-- [ ] `master` is green and clean (`git status` empty, CI passing).
+- [ ] `master` is clean (`git status` empty) and the local checks pass:
+      `cd core && swift run houdini-selftest` and `cd site && npm run build`.
+      (The release workflow itself is the release gate — it runs the full
+      verification on the tag before anything publishes.)
+- [ ] Optional but recommended: dry-run the release pipeline from the branch —
+      `gh workflow run "Release Houdini" --ref <branch>` — and confirm the run
+      is green and ends in a **draft** release; delete the draft afterwards.
 - [ ] Decide the bump (semver): patch / minor / major. Note it in the release notes.
 - [ ] No "coming soon" / "Soon" / "next milestone" copy anywhere user-facing
       (`grep -rIni 'coming soon\|>soon<\|next milestone' site/src README.md`).
 
-## 2 · Bump the version (single source of truth)
+## 2 · Bump the version (every place it lives)
 - [ ] `site/src/config.ts` → `export const version = "X.Y.Z"` (drives the install
       one-liner and every release link automatically).
+- [ ] `apps/menubar/Info.plist` → `CFBundleShortVersionString` = `X.Y.Z` and
+      increment `CFBundleVersion`.
 - [ ] `README.md` install one-liner + release link → `vX.Y.Z`.
-- [ ] Any other pinned reference to the old tag (`grep -rIn "vP.Q.R" . | grep -v node_modules`).
+- [ ] Any other pinned reference to the old version, with and without the `v`
+      prefix (`grep -rIn "vP\.Q\.R\|P\.Q\.R" . | grep -v node_modules`).
 - [ ] Commit: `chore(release): bump to vX.Y.Z`.
 
-## 3 · Build + verify artifacts
-- [ ] Build the app + CLI; produce the installer artifacts and `SHASUMS256.txt`.
-- [ ] `cd site && npm run build` passes.
-- [ ] Sanity-run the one-liner against the **new** tag on a clean path.
-
-## 4 · Publish the new release
+## 3 · Tag — CI builds, verifies, and publishes
 - [ ] Tag and push: `git tag vX.Y.Z && git push origin vX.Y.Z`.
-- [ ] `gh release create vX.Y.Z <artifacts> --title "Houdini vX.Y.Z" --notes "…"`.
-- [ ] Confirm `install.sh` on the new tag fetches the new artifacts and checksums match.
+- [ ] Watch the run: `gh run watch` (workflow "Release Houdini"). It must pass
+      all verification steps — core `swift test` (asserted to actually execute
+      tests), `houdini-selftest`, built-binary `--metrictest` + `--widgettest` —
+      before it stages, checksums, and publishes. **Do not** create the release
+      by hand; if the run fails, nothing shipped — fix and re-tag.
 
-## 5 · Prune obsolete releases + tags (the hygiene step)
+## 4 · Verify what CI published
+- [ ] `gh release view vX.Y.Z` → three assets: `Houdini.app.zip`, `houdini`,
+      `SHASUMS256.txt`.
+- [ ] Download `SHASUMS256.txt`, record the checksums in this file's shipped log.
+- [ ] Confirm `install.sh` on the new tag fetches the new artifacts and checksums
+      match (sanity-run the one-liner against the **new** tag on a clean path).
+
+## 5 · Retitle superseded releases + prune pointers (ADR-010, revised)
 - [ ] List what exists: `gh release list` and `git tag -l`.
-- [ ] For every superseded version `P.Q.R`:
-      `gh release delete vP.Q.R --yes --cleanup-tag` (deletes release **and** remote tag).
-- [ ] Delete leftover local tags: `git tag -d vP.Q.R`.
-- [ ] Re-check: `gh release list` shows **only** `vX.Y.Z`; `git tag -l` has no stale tags.
+- [ ] For every superseded version `P.Q.R`: **keep** the release and tag; retitle it
+      `gh release edit vP.Q.R --title "Houdini vP.Q.R (superseded — do not install)"`.
+- [ ] Prune the *pointers*: site, `README`, and the one-liner reference only `vX.Y.Z`
+      (covered by §2 — re-check here).
+- [ ] Re-check: `gh release list` shows `vX.Y.Z` as **Latest** and every older
+      release retitled "superseded".
 
 ## 6 · Ship the site (production)
 - [ ] Confirm the site references only `vX.Y.Z` (no old links, no "coming soon").
 - [ ] If a feature shipped, the relevant section is **adapted** (re-framed), not a
       loose new block bolted on (ADR-010).
-- [ ] Deploy production from `site/`: `vercel --prod`. (Preview deploys — `vercel deploy`
-      with no `--prod` — are safe for review and do **not** touch production.)
+- [ ] Deploy production from `site/`: `vercel build --prod && vercel deploy
+      --prebuilt --prod` (the practiced prebuilt two-step). Preview deploys —
+      `vercel deploy` with no `--prod` — are safe for review and do **not**
+      touch production.
 - [ ] Smoke-test production: home, `/install`, `/guide` all 200; one-liner copies the
       `vX.Y.Z` command.
 
@@ -110,7 +135,8 @@ from the new release, SHA-256 match, idempotent re-run.
 
 ---
 
-**Never:** leave two advertised versions live · point the site at a deleted tag ·
-publish a "Soon" placeholder · `vercel --prod` from an unreviewed build ·
-put any provider API/admin key in the site, frontend, env bundle, or repo
-(ADR-011 — keys live only in the user's Keychain).
+**Never:** leave two *advertised* versions live · point the site at a dead tag ·
+publish a "Soon" placeholder · `gh release create` by hand (CI is the sole
+publisher) · `vercel --prod` from an unreviewed build · put any provider
+API/admin key in the site, frontend, env bundle, or repo (ADR-011 — keys live
+only in the user's Keychain).
