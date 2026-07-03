@@ -9,8 +9,9 @@ private func err(_ s: String) { FileHandle.standardError.write(Data((s + "\n").u
 ///                    live, proving the timer reschedules without a restart; then
 ///                    runs a persistent-429 stub proving the rate-limit backoff
 ///                    widens the effective interval and resets on success.
-/// • `--metrictest` — prints the menu-bar text for every primary-metric choice,
-///                    proving the Settings picker changes what the bar shows.
+/// • `--metrictest` — asserts the known-answer menu-bar text for every
+///                    primary-metric choice (deterministic `PreviewData`) and
+///                    exits non-zero on any mismatch (DX-07).
 /// • `--launchtest` — calls SMAppService.register()/unregister() and reports the
 ///                    real result (ad-hoc signing usually can't fully register).
 enum SelfTest {
@@ -138,15 +139,38 @@ enum SelfTest {
 
     // MARK: Primary-metric switch
 
-    /// For each `PrimaryMetricChoice`, print the exact menu-bar text. Deterministic
-    /// (fixed `PreviewData`), so it doubles as the before/after switch proof.
+    /// For each `PrimaryMetricChoice`, assert the exact menu-bar text against a
+    /// known answer. `PreviewData.sampleMetrics()` is deterministic (5-hour 32%,
+    /// Weekly 95%, Sonnet weekly 61%, Extra usage $93/100), so the expected strings
+    /// are fixed — a formatting or metric-selection regression makes this exit
+    /// non-zero instead of green-lighting whatever got printed (DX-07).
     static func metricTest() {
+        var pass = 0, fail = 0
+        func check(_ name: String, got: String, want: String) {
+            if got == want {
+                pass += 1
+                err("  ✓ \(name) → \"\(got)\"")
+            } else {
+                fail += 1
+                err("  ✗ \(name) → got \"\(got)\", want \"\(want)\"")
+            }
+        }
+
         let metrics = PreviewData.sampleMetrics()
         err("=== metrictest: menu-bar text per primary-metric choice ===")
+        // Known answers for the sample fixture. `auto` picks the tightest limit —
+        // Weekly at 95% beats the $93/100 overage (93%).
+        let expected: [PrimaryMetricChoice: String] = [
+            .auto: "95%",
+            .fiveHour: "32%",
+            .weekly: "95%",
+            .sonnetWeekly: "61%",
+            .extraUsage: "$93/100",
+        ]
         for choice in PrimaryMetricChoice.allCases {
             let text = metrics.primary(for: choice).map(Format.barLabel) ?? "—"
             let name = choice.displayName.padding(toLength: 22, withPad: " ", startingAt: 0)
-            err("  \(name) → menu bar: \"\(text)\"")
+            check("\(name) menu bar", got: text, want: expected[choice] ?? "—")
         }
 
         MainActor.assumeIsolated {
@@ -160,7 +184,9 @@ enum SelfTest {
             clean.removePersistentDomain(forName: cleanName)
             let freshChoice = AppSettings(defaults: clean).primaryMetric
             let freshText = metrics.primary(for: freshChoice).map(Format.barLabel) ?? "—"
-            err("  clean install     → choice=\(freshChoice.rawValue), menu bar: \"\(freshText)\"")
+            check("clean install pins 5-hour", got: freshChoice.rawValue,
+                  want: PrimaryMetricChoice.fiveHour.rawValue)
+            check("clean install menu bar", got: freshText, want: "32%")
 
             let savedName = "houdini.metrictest.saved"
             let saved = UserDefaults(suiteName: savedName)!
@@ -169,18 +195,26 @@ enum SelfTest {
             AppSettings(defaults: saved).primaryMetric = .extraUsage
             let keptChoice = AppSettings(defaults: saved).primaryMetric
             let keptText = metrics.primary(for: keptChoice).map(Format.barLabel) ?? "—"
-            err("  saved=extra usage → choice=\(keptChoice.rawValue), menu bar: \"\(keptText)\" (user choice preserved)")
+            check("saved choice survives relaunch", got: keptChoice.rawValue,
+                  want: PrimaryMetricChoice.extraUsage.rawValue)
+            check("saved=extra usage menu bar", got: keptText, want: "$93/100")
             saved.removePersistentDomain(forName: savedName)
         }
 
         // Fallback: if the pinned 5-hour window is absent (rare), the bar should
-        // land on the next % window — never the dollar overage unless it's alone.
+        // land on the next % window (Weekly 95%) — never the dollar overage
+        // unless it's alone.
         err("--- fallback when the 5-hour window is absent ---")
         let no5h = metrics.filter { $0.label != "5-hour" }
         let fbText = no5h.primary(for: .fiveHour).map(Format.barLabel) ?? "—"
-        err("  5-hour pinned but missing → menu bar: \"\(fbText)\" (next % window, not Extra usage)")
+        check("5-hour pinned but missing falls back to next % window", got: fbText, want: "95%")
 
-        exit(0)
+        if fail == 0 {
+            err("metrictest: PASS — \(pass) checks")
+        } else {
+            err("metrictest: FAIL — \(fail) of \(pass + fail) checks failed")
+        }
+        exit(fail == 0 ? 0 : 1)
     }
 
     // MARK: Login-item registration (used by install.sh)

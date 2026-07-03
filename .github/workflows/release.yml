@@ -77,8 +77,8 @@ jobs:
         run: |
           set -euo pipefail
           BIN="apps/menubar/build/Houdini.app/Contents/MacOS/Houdini"
-          # --metrictest: deterministic launch/regression smoke (renders the
-          # menu-bar strings; exits non-zero only on crash/assert).
+          # --metrictest: known-answer assertions on the menu-bar strings
+          # (deterministic PreviewData; exits non-zero on any mismatch).
           "$BIN" --metrictest
           # --widgettest: 13 real checks with a genuine pass/fail exit code.
           # It exits 0 with a "no display available" note on a headless
