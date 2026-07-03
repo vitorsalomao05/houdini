@@ -22,7 +22,9 @@ apps/widget/     WidgetKit Notification Center widget — README-only placeholde
 apps/ios/        Native iOS app + widget scaffold (cookie auth, XcodeGen; not yet built — ADR-008)
 site/            Astro + Tailwind landing page (houdini.salomao.org; deploys via Vercel)
 install.sh       one-liner installer (SHA-256-verified download from a pinned Release)
-scripts/         release/init helpers — `init.sh` bootstrap; release CI is .github/workflows/release.yml
+scripts/         developer bootstrap (`init.sh`) — release CI is .github/workflows/release.yml
+conductor/       Build Conductor artifacts — `audits/` is tracked; `prompts/` is local-only (gitignored)
+audit/           v1 audit corpus (charter, diagnosis, plan — 2026-07-03)
 ```
 
 **Environment:** macOS 14+ / Apple Silicon. App = Swift / SwiftUI (menu bar + desktop
@@ -47,8 +49,10 @@ repo map + real commands + the top BACKLOG item.
 2. **Build loop**: pull the top `BACKLOG.md` item → discovery-first (map current state,
    confirm assumptions) → implement in a small, reviewable change → verify → update
    `BACKLOG.md` → commit.
-3. Keep `BACKLOG.md` and `CONTEXT.md` current as reality changes. Prefer proposing and
-   discussing before any large rebuild — everything is open to change, but not silently.
+3. Keep `BACKLOG.md` and `CONTEXT.md` current as reality changes. **Link, don't restate:**
+   work status lives only in `BACKLOG.md` and decision text only in `DECISIONS.md` — other
+   docs point at them instead of copying. Prefer proposing and discussing before any large
+   rebuild — everything is open to change, but not silently.
 
 ### Brain ⇄ Builder handoff (response format)
 
@@ -115,11 +119,11 @@ and the budget rule are defined once in the sections below — not restated per 
 
 ## Current priorities (app-first — see BACKLOG for detail)
 
-1. **P1 · Login/credential refactor** — simpler, works for *any* Claude Code user, not
-   just those with the CLI OAuth token in Keychain. *(Capped at slice (a) — broadened
-   discovery of an existing credential — per ADR-012; further subscription-auth expansion is
-   frozen, and a user with no Claude Code credential anywhere is out of scope by decision.)*
+1. **P1 · Login/credential refactor — DONE (capped).** Slice (a) — broadened discovery of
+   an existing credential — shipped; further subscription-auth expansion is **frozen** per
+   ADR-012, and a user with no Claude Code credential anywhere is out of scope by decision.
 2. **P2 · Widget accessibility + visual polish** — menu bar + desktop widget, end to end.
+   **← active focus** (slices 1–2 shipped; slice 3 — real-data verification — remains).
 3. **P3 · Site polish + ongoing features** — get the site to *zero visual clutter*, then
    keep shipping features/ideas as requested. The site is an evolving surface, not a
    one-time deliverable.
@@ -151,22 +155,25 @@ and the budget rule are defined once in the sections below — not restated per 
   confirm the change moves toward zero-clutter, not away.
 - **No telemetry or third-party trackers** get added to the site or app.
 
-## Survey findings — FRAME questions resolved (2026-06-30 → 2026-07-01)
+## Survey findings — FRAME questions resolved (2026-06-30 → 2026-07-01; historical record)
 
-- **Site deploy target + CI** — **Vercel**, project `houdini` (`site/.vercel/project.json`),
-  deployed **manually via the prebuilt CLI** (`vercel --prod` from `site/`; prebuilt output in
-  `site/.vercel/output/`). **No site CI** in `.github/workflows/` — the only workflow there
-  (`release.yml`) builds + publishes the macOS **app** on `v*.*.*` tags. A Vercel Git
-  integration *may* also exist dashboard-side but is not provable from the repo.
-  (Note: `ROADMAP.md` Phase 7 still says "Cloudflare Pages" — **stale, should be corrected**.)
-- **Non-CLI login root cause** — confirmed at the code level. OAuth discovery is pinned to the
-  single Keychain item `service="Claude Code-credentials"` (`core/.../ClaudeOAuthProvider.swift:45`,
-  read at `ClaudeAuth.swift:37`): no alternate item names, no `~/.claude/.credentials.json` file
-  fallback, no `refreshToken` use. A user without the Claude Code CLI lacks that exact item, so the
-  OAuth path is impossible for them and they're forced onto the claude.ai **cookie** WebView, which
-  uses an *ephemeral* store (`ClaudeLoginWindow.swift:40`) and a short-lived, non-refreshable
-  cookie. Full trace + 3 candidate fixes live in `BACKLOG.md` (P1). Recommended: broaden OAuth/token
-  discovery now (no ADR change), pursue a first-run OAuth PKCE flow as the durable answer.
+*Past tense — these record what the survey found **at the time**. Current state lives in
+`BACKLOG.md` (status) and `DECISIONS.md` (decisions).*
+
+- **Site deploy target + CI** — resolved: **Vercel**, project `houdini`
+  (`site/.vercel/project.json`), deployed manually via the prebuilt CLI
+  (`vercel build --prod && vercel deploy --prebuilt --prod` from `site/` — see `RELEASE.md`).
+  At survey time no site CI existed and `release.yml` had never published a release (fixed
+  2026-07-03 — v1 audit A3: `release.yml` is now the sole publisher). `ROADMAP.md` Phase 7's
+  "Cloudflare Pages" was stale and was corrected 2026-07-01.
+- **Non-CLI login root cause** — confirmed at the code level, *pre-slice (a)*: OAuth discovery
+  was pinned to the single Keychain item `service="Claude Code-credentials"` — no alternate
+  item names, no `~/.claude/.credentials.json` file fallback, no `refreshToken` use — so a
+  user without the Claude Code CLI was forced onto the ephemeral, short-lived claude.ai
+  **cookie** WebView. **P1 slice (a) then shipped** ordered Keychain discovery
+  (`"Claude Code-credentials"` → `"Claude Code"`), a read-only credentials-file fallback, and
+  refresh machinery (live endpoint left unwired). Everything further — including the
+  first-run OAuth PKCE flow the survey floated — is **frozen by ADR-012**; see `BACKLOG.md` P1.
 - **Test setup** — `core/` has real tests: `FetcherCoreTests` (swift-testing / `import Testing`)
   plus a `houdini-selftest` executable that re-runs the same assertions on CommandLineTools-only
   machines (`swift test` no-ops there). **No test targets** in `apps/menubar` (smoke via built
