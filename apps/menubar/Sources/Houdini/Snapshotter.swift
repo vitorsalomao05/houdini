@@ -67,12 +67,18 @@ enum Snapshotter {
         for scheme in [ColorScheme.light, .dark] {
             let suffix = scheme == .dark ? "dark" : "light"
             let model = UsageModel(previewResult: .success(metrics))
+            // Error-with-cache: the bar must show a stale cue (dim + glyph), not
+            // the frozen number in its normal threshold color (MB-03).
+            let stale = UsageModel(previewState: .error("Network error: request timed out"),
+                                   metrics: metrics)
 
             // The popover is now forced-dark glass (rendered once, all states, below).
             writePNG(SettingsView(settings: settings, launch: launch, session: session),
                      to: "\(dir)/settings-\(suffix).png", scheme: scheme)
             writePNG(MenuBarPreview(model: model, settings: settings, scheme: scheme),
                      to: "\(dir)/menubar-\(suffix).png", scheme: scheme)
+            writePNG(MenuBarPreview(model: stale, settings: settings, scheme: scheme),
+                     to: "\(dir)/menubar-stale-\(suffix).png", scheme: scheme)
         }
 
         renderPopover(metrics: metrics, session: session, dir: dir)
@@ -91,7 +97,7 @@ enum Snapshotter {
             ("ok",         UsageModel(previewResult: .success(metrics))),
             ("loading",    UsageModel()),                                   // .loading, no data → skeleton
             ("needs-auth", UsageModel(previewState: .signedOut)),
-            ("error",      UsageModel(previewState: .error("Claude token expired / not found — re-authenticate Claude Code."))),
+            ("error",      UsageModel(previewState: .error("Claude token expired — run `claude` to refresh your token."))),
             ("stale",      UsageModel(previewState: .error("Network error: request timed out"), metrics: metrics)),
         ]
         for (name, model) in states {

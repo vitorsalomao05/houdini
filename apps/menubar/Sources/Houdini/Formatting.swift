@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 import FetcherCore
 
 /// Threshold colors: <60% normal, 60–85% amber, >85% red.
@@ -29,10 +30,38 @@ enum Thresholds {
     static func menuBarColor(_ pct: Double?) -> Color {
         guard let p = pct else { return .primary }
         switch p {
-        case ..<60: return .green
-        case ..<85: return .orange
-        default:    return .red
+        case ..<60: return menuBarGreen
+        case ..<85: return menuBarAmber
+        default:    return menuBarRed
         }
+    }
+
+    // MARK: Menu bar text pairs (WCAG 2.1 AA — MB-04)
+
+    /// The system green/orange/red fail AA as 13pt TEXT on a light menu bar
+    /// (measured: systemGreen #28CD41 → 2.12:1, systemOrange #FF9500 → 2.20:1,
+    /// systemRed #FF3B30 → 3.55:1 vs #FFFFFF; worse vs an #EBEBEB bar). The bar
+    /// label therefore uses explicit light/dark pairs — darker AA hues in light
+    /// mode (#177239 → 6.00:1, #9A4E00 → 6.06:1, #B91C1C → 6.47:1 vs #FFFFFF;
+    /// 5.03 / 5.09 / 5.43 vs #EBEBEB) and the system dark variants in dark mode
+    /// (#32D74B → 8.40:1, #FF9F0A → 7.83:1, #FF453A → 4.73:1 vs #212121). Gauge
+    /// fills and popover rows keep the system colors — those surfaces are
+    /// forced-dark glass, where the dark variants already clear AA.
+    private static let menuBarGreen = paired(light: 0x177239, dark: 0x32D74B)
+    private static let menuBarAmber = paired(light: 0x9A4E00, dark: 0xFF9F0A)
+    private static let menuBarRed   = paired(light: 0xB91C1C, dark: 0xFF453A)
+
+    /// A color that resolves per-appearance at draw time (the menu bar's own
+    /// appearance, not the app's) via a dynamic `NSColor` provider — the same
+    /// mechanism the snapshotter already drives with `NSApp.appearance`.
+    private static func paired(light: UInt32, dark: UInt32) -> Color {
+        Color(nsColor: NSColor(name: nil) { appearance in
+            let hex = appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? dark : light
+            return NSColor(srgbRed: CGFloat((hex >> 16) & 0xFF) / 255,
+                           green: CGFloat((hex >> 8) & 0xFF) / 255,
+                           blue: CGFloat(hex & 0xFF) / 255,
+                           alpha: 1)
+        })
     }
 }
 

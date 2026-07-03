@@ -230,13 +230,15 @@ final class UsageModel: ObservableObject {
         fetchTask = nil
     }
 
-    /// Human-readable, token-safe error text. Credential/auth failures get a clear
-    /// "expired / not found" message instead of a number.
+    /// Human-readable, token-safe error text. Credential/auth failures name the
+    /// actual fix instead of a number — `.authExpired` is the CLI OAuth token
+    /// going stale, and the honest remedy is re-running `claude`, not the
+    /// claude.ai cookie sign-in (CORE-02/05).
     static func message(for error: Error) -> String {
         if let providerError = error as? ProviderError {
             switch providerError {
             case .authExpired:
-                return "Claude token expired / not found — re-authenticate Claude Code."
+                return "Claude token expired — run `claude` to refresh your token."
             case .needsLogin:
                 return "Claude.ai session expired — sign in again."
             case .rateLimited:
