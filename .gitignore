@@ -25,3 +25,6 @@ build/
 
 # Build Conductor prompt scratch (local only)
 conductor/prompts/
+
+# Claude Code local state/settings (machine-local; never commit)
+.claude/
