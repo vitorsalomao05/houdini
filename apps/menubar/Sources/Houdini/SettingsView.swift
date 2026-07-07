@@ -13,11 +13,13 @@ import AppKit
 /// We deliberately do **not** reintroduce custom controls just to satisfy the
 /// renderer; native UX/accessibility wins.
 ///
-/// Type scales with the user's text-size setting: every label goes through the
-/// shared `scaledFont` (see `SharedUI.swift`) rather than a fixed
-/// `.font(.system(size:))`, and the panel uses a flexible width (min/ideal/max)
-/// so enlarged text grows the window instead of clipping. The `Settings` scene
-/// sizes to content, so height follows automatically.
+/// Type is Dynamic-Type-ready: every label goes through the shared `scaledFont`
+/// (`@ScaledMetric`, see `SharedUI.swift`) instead of a fixed `.font(.system(size:))`,
+/// matching the popover and desktop widget, and the panel uses a flexible width
+/// (min/ideal/max) so any enlarged type grows the window instead of clipping. The
+/// `Settings` scene sizes to content, so height follows automatically. (On macOS the
+/// scale factor tracks `dynamicTypeSize`, which the system rarely drives, so the
+/// resting size is what most users see — the mechanism is here and correct regardless.)
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var launch: LaunchAtLogin
