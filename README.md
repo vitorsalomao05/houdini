@@ -83,6 +83,31 @@ repo map, the real build/test/run commands, and the current top backlog item.
 
 Credentials never leave the device. Tokens/cookies live in the macOS Keychain. No Houdini server ever sees them — there is none. Requests go straight from your Mac to each provider's own endpoint. The landing site has a dedicated trust/privacy section because the app touches logins.
 
+## Uninstall
+
+Houdini installs to two paths in your home folder and — only if you signed in to
+claude.ai in-app — keeps one session in your Keychain. To remove all of it, quit
+Houdini (menu bar ▸ Quit), then:
+
+```sh
+# If you enabled launch-at-login, unregister it first:
+"$HOME/Applications/Houdini.app/Contents/MacOS/Houdini" --unregister-login-item
+
+# Remove the app and the CLI:
+rm -rf "$HOME/Applications/Houdini.app"
+rm -f  "$HOME/.local/bin/houdini"
+
+# Remove Houdini's saved preferences:
+defaults delete org.salomao.houdini 2>/dev/null || true
+
+# Remove the claude.ai session Houdini stored (only exists if you used the
+# cookie sign-in). The Claude Code OAuth token is Claude Code's own — left alone:
+security delete-generic-password -s Houdini-claude-session 2>/dev/null || true
+```
+
+That's everything Houdini owns. It never touches your Claude Code credential
+(`Claude Code-credentials`), `~/.claude/`, or any provider data.
+
 ## License
 
 Free and open source under the [MIT License](LICENSE).
