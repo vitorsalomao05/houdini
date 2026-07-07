@@ -221,18 +221,27 @@ version, and reports the new version to the user.
 the site audit + its ToS-independent quick-wins (commit `78e2bf3`), P2 slices 1–2 (commits
 `19d3ed0`, `1d8912b`), and the v1 audit Phases A–E + Phase F polish (F2 AA/Dynamic Type `9117725`,
 F3 site niceties `58d65b5`, F4 README hero `2320b84`) have all shipped, and **Phase G
-tagged / CI-published `v1.0.0` and deployed the site (2026-07-07)**. The only remaining open
-v1 item is the owner-run data check:*
+tagged / CI-published `v1.0.0` and deployed the site (2026-07-07)**. F1 — the last open
+non-gated v1 item — passed on 2026-07-07, so **v1 is CLOSED: all 9 v1-ready criteria
+(audit/05 §1) now hold.** Release + go-live record:
+[`v1.0.0`](https://github.com/vitorsalomao05/houdini/releases/tag/v1.0.0) ·
+[`RELEASE.md`](RELEASE.md). Remaining threads are all post-v1:*
 
-1. [ ] **P2 slice 3 / v1 audit F1** — verify gauges / reset timers / overage against real
-   Claude Pro/Max data (**owner-run** manual check; also validates B1/B3). Last non-gated v1 item.
+1. [x] **P2 slice 3 / v1 audit F1 — DONE 2026-07-07 (owner-verified).** Gauges / reset timers /
+   overage verified against a live Claude Pro/Max account (**owner-run** manual check; also
+   validated B1/B3). This was the last open non-gated v1 item.
 2. [x] **v1 audit Phase G — SHIPPED 2026-07-07 (🔴 gated, owner-signed).** G1 verification
    matrix, then G2: `v1.0.0` bumped in one commit, dry-run-verified, fast-forwarded to `master`,
    tagged, and **CI-published** ([`v1.0.0`](https://github.com/vitorsalomao05/houdini/releases/tag/v1.0.0)
    — the first release built + published by CI); site deployed. Go-live record + checksums in
    `RELEASE.md`. Updater `--check` validated live; its mutation dogfood waits for the first
    post-1.0.0 release (see the `RELEASE.md` v1.0.0 note).
-3. [ ] **P3 ongoing** — continue site polish + the feature/idea stream (Parking lot).
+3. [ ] **Deferred (v1.x) — dogfood `houdini update` LIVE mutation at the first post-1.0.0
+   release.** Mutation/rollback/cleanup are currently covered by `houdini-selftest` E2/E3, but
+   the live upgrade path can't be exercised yet because the `v0.4.0` endpoint predates the
+   updater (both endpoints must carry the `update` verb). Exercise the real upgrade →
+   mutation → rollback → cleanup path once v1.x ships. See the `RELEASE.md` v1.0.0 updater note.
+4. [ ] **P3 ongoing** — continue site polish + the feature/idea stream (Parking lot).
 
 ## Parking lot / ideas (ongoing)
 

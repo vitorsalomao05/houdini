@@ -121,11 +121,12 @@ and the budget rule are defined once in the sections below — not restated per 
 1. **P1 · Login/credential refactor — DONE (capped).** Slice (a) — broadened discovery of
    an existing credential — shipped; further subscription-auth expansion is **frozen** per
    ADR-012, and a user with no Claude Code credential anywhere is out of scope by decision.
-2. **P2 · Widget accessibility + visual polish** — menu bar + desktop widget, end to end.
-   **← active focus** (slices 1–2 shipped; slice 3 — real-data verification — remains).
+2. **P2 · Widget accessibility + visual polish — DONE.** Menu bar + desktop widget, end to
+   end; slices 1–2 shipped and slice 3 (real-data verification) owner-verified 2026-07-07.
+   See `BACKLOG.md`.
 3. **P3 · Site polish + ongoing features** — get the site to *zero visual clutter*, then
    keep shipping features/ideas as requested. The site is an evolving surface, not a
-   one-time deliverable.
+   one-time deliverable. **← active focus** now that v1 is closed.
 
 ## Guardrails (do not violate without explicit sign-off)
 
