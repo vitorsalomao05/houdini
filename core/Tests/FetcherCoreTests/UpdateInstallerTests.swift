@@ -221,6 +221,13 @@ final class FakeInstallEnv: @unchecked Sendable {
         #expect(!UpdateInstaller.samePath("/a/b/houdini", "/usr/local/bin/houdini"))
     }
 
+    @Test func legacyArtifactsReportOnlyExisting() {
+        let present: Set<String> = ["/Applications/Houdini.app", "/home/Applications/Tally.app"]
+        let found = LegacyArtifacts.detect(home: "/home", pathExists: { present.contains($0) })
+        #expect(found == ["/Applications/Houdini.app", "/home/Applications/Tally.app"])  // owned-path copy excluded
+        #expect(LegacyArtifacts.detect(home: "/home", pathExists: { _ in false }).isEmpty)
+    }
+
     // MARK: - Detached spawn primitive (safe real spawns)
 
     @Test func detachedRunReturnsExitCode() throws {

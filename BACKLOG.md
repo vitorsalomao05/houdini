@@ -120,11 +120,25 @@ WCAG-AA clean; concrete gaps captured below.
       (v1 audit unit B4 — app Settings + site privacy page).
 - [ ] Ongoing site polish + feature/idea stream (tracked in the Parking lot below).
 
-## P4 · App — Self-update / clean-upgrade command (`houdini update`)  `[ ]`
+## P4 · App — Self-update / clean-upgrade command (`houdini update`)  `[x]`
 
-*Captured 2026-07-01 — future wave, not scheduled yet (comes after P1–P3).*
+*Captured 2026-07-01; **shipped 2026-07-07** (v1 audit Phase E — see `audit/07`, `audit/08`).*
 
-**Goal.** One command (`houdini update`) that upgrades an installed Houdini to the latest
+**Done.** `houdini update` / `--check` / `<version>` ship in the `houdini` CLI:
+- `--check` (read-only, `--json`) resolves installed (app `Info.plist`) vs. latest (GitHub
+  Releases API over the pinned ephemeral session, tokenless — no credential).
+- The mutation delegates to the **verified per-tag `install.sh`** (SHA-256, no `sudo`, no
+  Gatekeeper) with a TAG-match guard, rename-aside CLI + pre-stashed app for rollback, and a
+  tty-detached / no-`HOUDINI_YES` spawn so launch-at-login stays as the user set it. Post-
+  install version verify; any failure restores the prior install. `install.sh`/`SHASUMS256.txt`
+  unchanged (it re-runs that tag's own installer).
+- Owned-file cleanup **reports** (never deletes) stale non-owned copies
+  (`/Applications/Houdini.app`, legacy `Tally.app`); never touches user data or the Keychain.
+- Downgrade is allowed via `houdini update <version>` when the tag still exists (revised
+  ADR-010 keeps superseded releases); a bare `houdini update` never auto-downgrades an ahead
+  build. Menu-bar "Check for updates" remains a possible thin follow-on (out of v1 scope).
+
+**Goal (original).** One command (`houdini update`) that upgrades an installed Houdini to the latest
 release, removes leftover files from any previous version in production, installs the new
 version, and reports the new version to the user.
 

@@ -36,6 +36,23 @@ A glanceable **Notification Center widget** (WidgetKit) is a *deferred* future s
 built, and hard-blocked under the current distribution (ADR-013); Apple would cap its refresh
 at ~15 min anyway (ADR-002), so it is not advertised on the site.
 
+## Update
+
+Keep Houdini current with the built-in updater. `houdini update` re-runs the same
+verified, SHA-256-checked `install.sh` path (no `sudo`, no Gatekeeper prompt,
+launch-at-login left exactly as you set it), then reports the new version:
+
+```sh
+houdini update            # update to the latest release
+houdini update --check    # dry-run: show installed vs. latest, change nothing
+houdini update 0.5.0      # install a specific release (incl. rollback to an older one)
+```
+
+It updates only what it installed — `~/Applications/Houdini.app` and
+`~/.local/bin/houdini` — reads no credential, and rolls back to your current version if
+anything fails. If Houdini is running, quit and relaunch it (menu bar ▸ Quit) to load the
+new version.
+
 ## The core idea (read this first)
 
 The naive approach is "open a logged-in page in a background browser, reload every minute, scrape the number." We researched this and found a **much better path**: most AI usage numbers are backed by a **JSON endpoint**, not just rendered HTML. So instead of driving a browser, Houdini reads the user's existing credential (Keychain OAuth token or session cookie) and calls the JSON endpoint directly. This is lighter (~6 MB native vs hundreds of MB of bundled Chromium), more robust (no DOM breakage), and far easier to sign/notarize.

@@ -645,13 +645,23 @@ let e2Tty = try? DetachedProcess.run("/bin/sh",
     env: ["PATH": "/usr/bin:/bin"])
 check("detached run has NO controlling terminal (/dev/tty unavailable)", e2Tty == 3)
 
+// === Phase E3: owned-file manifest — legacy-copy detection (report, never delete) ===
+print("=== update cleanup manifest (E3) ===")
+do {
+    let present: Set<String> = ["/Applications/Houdini.app", "/home/Applications/Tally.app"]
+    let found = LegacyArtifacts.detect(home: "/home", pathExists: { present.contains($0) })
+    check("legacy detect reports only existing non-owned copies",
+          found == ["/Applications/Houdini.app", "/home/Applications/Tally.app"]
+          && LegacyArtifacts.detect(home: "/home", pathExists: { _ in false }).isEmpty)
+}
+
 print("---")
 // DX-06 parity guard: the pinned number of checks this mirror must run — 53 prior
 // (38 baseline + 15 unit-C2 provider checks) + 18 Phase-E1 update-resolver + 16
-// Phase-E2 update-mutation checks. Adding/removing a check above (or a mirrored @Test)
-// means updating this pin in the SAME commit; any mismatch fails the run, so silent
-// mirror drift is impossible.
-let pinnedCheckCount = 87
+// Phase-E2 update-mutation + 1 Phase-E3 cleanup-manifest check. Adding/removing a check
+// above (or a mirrored @Test) means updating this pin in the SAME commit; any mismatch
+// fails the run, so silent mirror drift is impossible.
+let pinnedCheckCount = 88
 if checks != pinnedCheckCount {
     failures += 1
     print("  ✘ parity — expected exactly \(pinnedCheckCount) checks, ran \(checks) (mirror drift? update the pin)")

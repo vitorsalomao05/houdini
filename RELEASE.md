@@ -136,6 +136,9 @@ from the new release, SHA-256 match, idempotent re-run.
 
 ## 7 · Post-release
 - [ ] Update `ROADMAP.md` / `DECISIONS.md` if the release changed direction.
+- [ ] From a prior install, run `houdini update --check` and confirm it reports the new
+      version, then `houdini update` upgrades cleanly (the updater's first real dogfood —
+      it re-runs the new tag's verified `install.sh`, then rolls back on any failure).
 - [ ] Announce only after production is verified.
 
 ---

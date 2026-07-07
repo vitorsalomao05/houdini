@@ -149,6 +149,17 @@ func runUpdateCheck(target: String?, json: Bool) async {
     exit(0)
 }
 
+/// After a successful update, report any stale non-owned Houdini copies for manual
+/// removal. The updater never deletes outside its two owned paths (least-privilege).
+private func reportLegacyArtifacts() {
+    let legacy = LegacyArtifacts.detect()
+    guard !legacy.isEmpty else { return }
+    print("  Note: older/duplicate Houdini copies the updater does not manage:")
+    for path in legacy { print("    • \(path)") }
+    print("    Remove them by hand if unused — the updater only ever touches "
+        + "~/Applications/Houdini.app and ~/.local/bin/houdini.")
+}
+
 /// The mutation: update through the verified per-tag install.sh with rename-aside
 /// rollback (audit 07 R3 / Phase E2). `--yes`/`-y` is accepted for script-compat but
 /// no confirmation is prompted — invoking `houdini update` is itself the intent, and
@@ -173,9 +184,11 @@ func runUpdateInstall(target: String?, yes: Bool) async {
         print("✓ Updated Houdini \(fromLabel) → v\(to).")
         print("  App: ~/Applications/Houdini.app   CLI: ~/.local/bin/houdini")
         print("  If Houdini is running, quit it (menu bar ▸ Quit) and relaunch to load v\(to).")
+        reportLegacyArtifacts()
         exit(0)
     case .installedFresh(let version):
         print("✓ Installed Houdini v\(version).")
+        reportLegacyArtifacts()
         exit(0)
     case .failed(let reason, let unchanged, let rollbackClean):
         let current = unchanged.map { "Your current install (v\($0)) is unchanged." }
