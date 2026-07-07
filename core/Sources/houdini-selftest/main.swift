@@ -501,12 +501,157 @@ check("state: equal → upToDate",
 check("state: newer installed → ahead",
       UpdateStatus(installed: SemanticVersion("0.6.0"), latest: e1Latest).state == .ahead)
 
+// === Phase E2: update mutation — delegated install with rollback ===
+// Mirrors UpdateInstallerTests.swift. In-memory fake env: no real fs, no network, no
+// spawned installer — the destructive path is safe to exercise. Plus the detached-spawn
+// primitive (real, harmless /bin/sh spawns) proving no controlling terminal (R3.4).
+print("=== update mutation (E2) ===")
+
+final class FakeInstall: @unchecked Sendable {
+    let cli = "/home/.local/bin/houdini"
+    let app = "/home/Applications/Houdini.app"
+    var paths: Set<String> = []
+    var versionAt: [String: SemanticVersion] = [:]
+    var running: String?
+    var resolve: Result<SemanticVersion, Error>
+    var fetch: Result<String, Error>
+    enum Behavior { case ok(SemanticVersion); case exits(Int32); case fails(Error) }
+    var behavior: Behavior
+    var moves = 0
+    init(installed: SemanticVersion? = SemanticVersion("0.4.0"),
+         resolveTo: SemanticVersion = SemanticVersion("0.5.0")!,
+         tag: String = "v0.5.0",
+         installs: SemanticVersion = SemanticVersion("0.5.0")!) {
+        resolve = .success(resolveTo)
+        fetch = .success("REPO=\"x\"\nTAG=\"\(tag)\"\n")
+        behavior = .ok(installs)
+        paths.insert(cli); running = cli
+        if let installed { paths.insert(app); versionAt[app] = installed }
+    }
+    enum E: Error { case missing }
+    func inst() -> UpdateInstaller {
+        UpdateInstaller(
+            managedCLIPath: cli, appPath: app,
+            runningCLIPath: { self.running },
+            pathExists: { self.paths.contains($0) },
+            move: { f, t in
+                guard self.paths.contains(f) else { throw E.missing }
+                self.paths.remove(f); self.paths.insert(t)
+                self.versionAt[t] = self.versionAt[f]; self.versionAt[f] = nil
+                self.moves += 1
+            },
+            remove: { self.paths.remove($0); self.versionAt[$0] = nil },
+            installedVersion: { self.versionAt[self.app] },
+            resolveVersion: { _ in try self.resolve.get() },
+            fetchInstaller: { _ in try self.fetch.get() },
+            runInstaller: { _, _ in
+                switch self.behavior {
+                case .ok(let v):
+                    self.paths.insert(self.app); self.paths.insert(self.cli)
+                    self.versionAt[self.app] = v; return 0
+                case .exits(let c): return c
+                case .fails(let e): throw e
+                }
+            })
+    }
+    func clean(_ v: SemanticVersion?) -> Bool {
+        let want: Set<String> = v == nil ? [cli] : [cli, app]
+        return paths == want && versionAt[app] == v
+    }
+}
+
+func isFailed(_ o: UpdateOutcome) -> Bool { if case .failed = o { true } else { false } }
+func isRefused(_ o: UpdateOutcome) -> Bool { if case .refused = o { true } else { false } }
+
+check("parseInstallerTag reads TAG line",
+      UpdateInstaller.parseInstallerTag("REPO=\"x\"\nTAG=\"v0.5.0\"\n") == SemanticVersion("0.5.0"))
+check("parseInstallerTag ignores commented TAG",
+      UpdateInstaller.parseInstallerTag("# TAG=\"v9.9.9\"\nTAG=\"v0.6.0\" # bump\n") == SemanticVersion("0.6.0"))
+check("samePath canonical equal / not-equal",
+      UpdateInstaller.samePath("/a/houdini", "/a/houdini")
+      && !UpdateInstaller.samePath("/a/houdini", "/b/houdini"))
+
+do {
+    let e = FakeInstall()
+    let o = await e.inst().run(target: .latest)
+    check("happy update → .updated(0.4.0→0.5.0), stashes cleaned",
+          o == .updated(from: SemanticVersion("0.4.0"), to: SemanticVersion("0.5.0")!)
+          && e.clean(SemanticVersion("0.5.0")))
+}
+do {
+    let e = FakeInstall(installed: SemanticVersion("0.5.0"), resolveTo: SemanticVersion("0.5.0")!)
+    let o = await e.inst().run(target: .latest)
+    check("already current → no-op, no moves", o == .alreadyCurrent(SemanticVersion("0.5.0")!) && e.moves == 0)
+}
+do {
+    let e = FakeInstall(); e.behavior = .exits(1)                       // e.g. shasum mismatch → die
+    let o = await e.inst().run(target: .latest)
+    var restored = false
+    if case .failed(_, let unchanged, let cleanRB) = o { restored = (unchanged == SemanticVersion("0.4.0") && cleanRB) }
+    check("installer failure → restore to 0.4.0", restored && e.clean(SemanticVersion("0.4.0")))
+}
+do {
+    let e = FakeInstall(tag: "v9.9.9")
+    let o = await e.inst().run(target: .latest)
+    check("TAG mismatch → failed before any move", isFailed(o) && e.moves == 0)
+}
+do {
+    let e = FakeInstall(); e.running = "/usr/local/bin/houdini"
+    let o = await e.inst().run(target: .latest)
+    check("unmanaged install → refused, nothing touched", isRefused(o) && e.moves == 0)
+}
+do {
+    let e = FakeInstall(); e.behavior = .ok(SemanticVersion("0.4.9")!)  // exit 0 but wrong version
+    let o = await e.inst().run(target: .latest)
+    check("post-install wrong version → rolled back to 0.4.0", isFailed(o) && e.clean(SemanticVersion("0.4.0")))
+}
+do {
+    struct Boom: Error {}
+    let e = FakeInstall(); e.behavior = .fails(Boom())
+    let o = await e.inst().run(target: .latest)
+    check("installer throw (Ctrl-C-like) → restore", isFailed(o) && e.clean(SemanticVersion("0.4.0")))
+}
+do {
+    // Bare `update` on an ahead build (dev 1.0.0, latest 0.5.0) must NOT downgrade.
+    let e = FakeInstall(installed: SemanticVersion("1.0.0"), resolveTo: SemanticVersion("0.5.0")!)
+    let o = await e.inst().run(target: .latest)
+    check("bare update on an ahead build → .ahead, no downgrade",
+          o == .ahead(installed: SemanticVersion("1.0.0")!, latest: SemanticVersion("0.5.0")!) && e.moves == 0)
+}
+do {
+    let e = FakeInstall(installed: SemanticVersion("0.5.0"), resolveTo: SemanticVersion("0.3.0")!,
+                        tag: "v0.3.0", installs: SemanticVersion("0.3.0")!)
+    let o = await e.inst().run(target: .version("0.3.0"))
+    check("named downgrade when tag exists → updated",
+          o == .updated(from: SemanticVersion("0.5.0"), to: SemanticVersion("0.3.0")!) && e.clean(SemanticVersion("0.3.0")))
+}
+do {
+    let e = FakeInstall(); e.resolve = .failure(UpdateError.tagNotFound("v0.3.0"))
+    let o = await e.inst().run(target: .version("0.3.0"))
+    check("404 named version → failed, no moves", isFailed(o) && e.moves == 0)
+}
+do {
+    let e = FakeInstall(installed: nil)
+    let o = await e.inst().run(target: .latest)
+    check("fresh install when app missing → installedFresh",
+          o == .installedFresh(SemanticVersion("0.5.0")!) && e.clean(SemanticVersion("0.5.0")))
+}
+
+// Detached spawn primitive — real but harmless /bin/sh spawns.
+let e2ExitCode = try? DetachedProcess.run("/bin/sh", ["/bin/sh", "-c", "exit 42"], env: ["PATH": "/usr/bin:/bin"])
+check("detached run returns child exit code (42)", e2ExitCode == 42)
+let e2Tty = try? DetachedProcess.run("/bin/sh",
+    ["/bin/sh", "-c", "if : 2>/dev/null >/dev/tty; then exit 0; else exit 3; fi"],
+    env: ["PATH": "/usr/bin:/bin"])
+check("detached run has NO controlling terminal (/dev/tty unavailable)", e2Tty == 3)
+
 print("---")
 // DX-06 parity guard: the pinned number of checks this mirror must run — 53 prior
-// (38 baseline + 15 unit-C2 provider checks) + 18 Phase-E1 update-resolver checks.
-// Adding/removing a check above (or a mirrored @Test) means updating this pin in the SAME
-// commit; any mismatch fails the run, so silent mirror drift is impossible.
-let pinnedCheckCount = 71
+// (38 baseline + 15 unit-C2 provider checks) + 18 Phase-E1 update-resolver + 16
+// Phase-E2 update-mutation checks. Adding/removing a check above (or a mirrored @Test)
+// means updating this pin in the SAME commit; any mismatch fails the run, so silent
+// mirror drift is impossible.
+let pinnedCheckCount = 87
 if checks != pinnedCheckCount {
     failures += 1
     print("  ✘ parity — expected exactly \(pinnedCheckCount) checks, ran \(checks) (mirror drift? update the pin)")

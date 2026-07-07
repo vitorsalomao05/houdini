@@ -149,13 +149,42 @@ func runUpdateCheck(target: String?, json: Bool) async {
     exit(0)
 }
 
-/// The mutation — implemented in E2. Until then, refuse cleanly instead of
-/// half-updating: the read-only `--check` is safe to ship and dogfood on its own
-/// (audit 07 · Phase 2 before Phase 3).
+/// The mutation: update through the verified per-tag install.sh with rename-aside
+/// rollback (audit 07 R3 / Phase E2). `--yes`/`-y` is accepted for script-compat but
+/// no confirmation is prompted — invoking `houdini update` is itself the intent, and
+/// the delegated installer runs non-interactively (login item left as-is).
 func runUpdateInstall(target: String?, yes: Bool) async {
-    emitError("""
-    error: the update install step is not available in this build yet.
-    Run `houdini update --check` to see whether a newer release exists.
-    """)
-    exit(1)
+    let installer = UpdateInstaller.live(userAgent: updateUserAgent)
+    let updateTarget: UpdateTarget = target.map { .version($0) } ?? .latest
+
+    switch await installer.run(target: updateTarget) {
+    case .refused(let message):
+        emitError("error: \(message)")
+        exit(1)
+    case .alreadyCurrent(let version):
+        print("Already on the latest (v\(version)).")
+        exit(0)
+    case .ahead(let installed, let latest):
+        print("You're on v\(installed) — newer than the latest release (v\(latest)). Nothing to update.")
+        print("  (to move to an older release explicitly: houdini update \(latest))")
+        exit(0)
+    case .updated(let from, let to):
+        let fromLabel = from.map { "v\($0)" } ?? "an earlier version"
+        print("✓ Updated Houdini \(fromLabel) → v\(to).")
+        print("  App: ~/Applications/Houdini.app   CLI: ~/.local/bin/houdini")
+        print("  If Houdini is running, quit it (menu bar ▸ Quit) and relaunch to load v\(to).")
+        exit(0)
+    case .installedFresh(let version):
+        print("✓ Installed Houdini v\(version).")
+        exit(0)
+    case .failed(let reason, let unchanged, let rollbackClean):
+        let current = unchanged.map { "Your current install (v\($0)) is unchanged." }
+            ?? "Your install is unchanged."
+        emitError("✗ Update failed: \(reason). \(current)")
+        if !rollbackClean {
+            emitError("  ! rollback may be incomplete — check ~/Applications/Houdini.app "
+                    + "and ~/.local/bin/houdini.")
+        }
+        exit(1)
+    }
 }
