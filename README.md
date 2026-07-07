@@ -11,6 +11,11 @@ any extra-usage spend, refreshed about **every 60 seconds**. OpenAI and the
 Anthropic Console are on the roadmap. No account, no server; credentials stay
 in your Keychain.
 
+<p align="center">
+  <img src="docs/popover.png" width="440"
+    alt="The Houdini menu-bar popover: a 5-hour session window at 32% and the weekly limit at 95%, each a color-coded ring gauge with its reset timer; a Sonnet weekly bar at 61%; and extra-usage spend at $93.00 of $100.00. Sample data." />
+</p>
+
 ## Install (macOS 14+, Apple Silicon)
 
 ```sh
