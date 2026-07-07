@@ -37,24 +37,36 @@ Go-live executed in order:
        (`version` + `installTag`), `site/package.json` (+ lockfile version
        fields), `README.md` (one-liner + release link), `install.sh` (`TAG`),
        and the doc-accuracy refs (`CLAUDE.md`, `CONTEXT.md`, `SECURITY.md`).
-2. [ ] Dry-run the CI publisher from `release/v1.0.0`
-       (`gh workflow run "Release Houdini" --ref release/v1.0.0`) → confirm a
-       green **draft** with all three assets + `SHASUMS256.txt`; delete the draft.
-3. [ ] Fast-forward `release/v1.0.0` → `master`, push, then
-       `git tag v1.0.0 && git push origin v1.0.0`. CI builds, verifies,
-       checksums, and publishes the (immutable) release. **Never** `gh release
-       create` by hand.
-4. [ ] Verify the published `v1.0.0`: three assets (`Houdini.app.zip`, `houdini`,
-       `SHASUMS256.txt`) + green verification steps. Checksums (SHA-256) recorded
-       here post-publish: `Houdini.app.zip` `…`, `houdini` `…`.
-5. [ ] Retitle `v0.4.0` "superseded — do not install" (keep the tag for rollback
+2. [x] Dry-ran the CI publisher from `release/v1.0.0`
+       (`gh workflow run "Release Houdini" --ref release/v1.0.0`, run
+       `28895965621`) → green; all three assets + `SHASUMS256.txt` in a **draft**
+       (`isDraft:true`); draft deleted (no git tag was created).
+3. [x] Fast-forwarded `release/v1.0.0` → `master` (`18752fb`), pushed, then
+       `git tag v1.0.0 && git push origin v1.0.0`. CI run `28896182910` built,
+       verified, checksummed, and published the (immutable) release — no manual
+       `gh release create`.
+4. [x] Verified the published `v1.0.0`: three assets (`Houdini.app.zip`,
+       `houdini`, `SHASUMS256.txt`) + every verification step green. Checksums
+       (SHA-256):
+       `Houdini.app.zip` `c57f5e6e31a815137bcc29f95cafd50327fffa138f0ef1254c7733898f4e09d4`,
+       `houdini` `260553832e1f61ff4674f087e992116b4bc951f7cb39edc5d962aa4006034e0f`.
+5. [x] Retitled `v0.4.0` "superseded — do not install"; the tag is kept (rollback
        + the `houdini update` path).
-6. [ ] `cd site && vercel build --prod && vercel deploy --prebuilt --prod`.
-       Production `houdini.salomao.org` serves v1.0.0; routes 200; the live
-       one-liner points at `v1.0.0`.
-7. [ ] Dogfood the updater: from a `v0.4.0` install, `houdini update --check`
-       reports `1.0.0`, then `houdini update` upgrades cleanly (its first real
-       run — re-runs the new tag's verified `install.sh`, rolls back on failure).
+6. [x] `vercel build --prod && vercel deploy --prebuilt --prod`. Production
+       `houdini.salomao.org` serves v1.0.0; all 7 routes + `og.png` + sitemap 200;
+       the branded `/404` returns 404; the live one-liner points at `v1.0.0`.
+7. [x] Updater dogfood (partial — see note): installed `v0.4.0`, then upgraded to
+       `v1.0.0` via the one-liner (the supported path — app plist `0.4.0` → `1.0.0`,
+       CLI now `houdini 1.0.0`). From the resulting `v1.0.0` CLI,
+       `houdini update --check` resolves the **live** release and reports
+       `upToDate` (installed 1.0.0 = latest 1.0.0), and a bare `houdini update`
+       correctly no-ops with zero mutation and no stash residue.
+       **Note:** `houdini update` is a **v1.0.0 feature** — the pre-updater
+       `v0.4.0` CLI has no `update` verb (`error: no provider registered with id
+       'update'`), so the updater's live *mutation* dogfood necessarily waits for
+       the first release **after** v1.0.0 (both endpoints must carry the updater).
+       The mutation/rollback/cleanup matrix is covered by the passing
+       `houdini-selftest` E2/E3 checks (green locally **and** on the CI runner).
 
 ---
 
