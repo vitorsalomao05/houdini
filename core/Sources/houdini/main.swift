@@ -18,6 +18,7 @@ houdini — local-first AI usage snapshots, as JSON on stdout
 
 USAGE:
   houdini [<provider-id>] [--json]   fetch a provider snapshot (default: claude)
+  houdini update [--check]           update Houdini (see: houdini update --help)
   houdini --version                  print the version
   houdini --help                     show this help
 
@@ -28,28 +29,32 @@ EXIT CODES:
   64  usage error (unknown flag or provider id)
 """
 
-// MARK: - Argument parsing (flags short-circuit; positionals feed the dispatch)
+// MARK: - Top-level (implicit `fetch`) verb
 
-let arguments = Array(CommandLine.arguments.dropFirst())
-var positionals: [String] = []
-
-for argument in arguments {
-    switch argument {
-    case "--help", "-h":
-        print(usage)
-        exit(0)
-    case "--version":
-        print("houdini \(houdiniVersion)")
-        exit(0)
-    case "--json":
-        continue // JSON is the only output mode; accepted for a stable contract.
-    default:
-        guard !argument.hasPrefix("-") else {
-            emitError("error: unknown flag '\(argument)'\n\n\(usage)")
-            exit(64) // EX_USAGE
+/// Parse the default verb's flags + positionals, then fetch. `--help`/`--version`
+/// short-circuit here; unknown flags exit 64. The `update` verb is dispatched
+/// separately (below) so its own flags aren't rejected by this loop.
+func runTopLevel(arguments: [String]) async {
+    var positionals: [String] = []
+    for argument in arguments {
+        switch argument {
+        case "--help", "-h":
+            print(usage)
+            exit(0)
+        case "--version":
+            print("houdini \(houdiniVersion)")
+            exit(0)
+        case "--json":
+            continue // JSON is the only output mode; accepted for a stable contract.
+        default:
+            guard !argument.hasPrefix("-") else {
+                emitError("error: unknown flag '\(argument)'\n\n\(usage)")
+                exit(64) // EX_USAGE
+            }
+            positionals.append(argument)
         }
-        positionals.append(argument)
     }
+    await runFetch(providerId: positionals.first ?? "claude")
 }
 
 // MARK: - Commands
@@ -85,10 +90,15 @@ func runFetch(providerId: String) async {
 
 // MARK: - Verb dispatch
 
-// Today the only verb is the implicit `fetch`, whose first positional is a
-// provider id. Future verbs (e.g. `update` — Phase E) slot in as dedicated
-// cases above the default.
-switch positionals.first {
+// The first argument selects the verb. `update` (Phase E) is intercepted here so its
+// own flags (`--check`, `--json`, `-y`) are parsed in that verb's context rather than
+// rejected by the top-level flag loop. No provider is named `update`, so there is no
+// collision with the implicit `fetch` path.
+let arguments = Array(CommandLine.arguments.dropFirst())
+
+switch arguments.first {
+case "update":
+    await runUpdate(arguments: Array(arguments.dropFirst()))
 default:
-    await runFetch(providerId: positionals.first ?? "claude")
+    await runTopLevel(arguments: arguments)
 }

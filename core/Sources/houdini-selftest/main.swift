@@ -412,12 +412,101 @@ await checkThrows("cookie 5xx → http(status, body snippet)", matches: { e in
     _ = try await cookieProvider(script: [(503, Data("overloaded".utf8))]).0.fetch()
 }
 
+// === Phase E1: update resolver — semver, installed-read, GitHub resolve, state ===
+// Mirrors UpdateResolverTests.swift. Pure logic + a scripted transport: no network,
+// no filesystem, no credential. Proves the GitHub request carries no Authorization.
+print("=== update resolver (E1) ===")
+
+check("semver parses plain X.Y.Z",
+      SemanticVersion("0.4.0") == SemanticVersion(major: 0, minor: 4, patch: 0))
+check("semver parses v-prefix",
+      SemanticVersion("v1.2.3") == SemanticVersion(major: 1, minor: 2, patch: 3))
+check("semver rejects two-part", SemanticVersion("0.4") == nil)
+check("semver rejects four-part", SemanticVersion("1.2.3.4") == nil)
+check("semver compares numerically (0.9.0 < 0.10.0)",
+      SemanticVersion("0.9.0")! < SemanticVersion("0.10.0")!)
+
+func plistBytes(_ dict: [String: Any]) -> Data {
+    try! PropertyListSerialization.data(fromPropertyList: dict, format: .xml, options: 0)
+}
+check("installed read from app plist → 0.4.0",
+      InstalledVersion.read(plistPath: "/x",
+        readData: { _ in plistBytes(["CFBundleShortVersionString": "0.4.0"]) })
+        == SemanticVersion("0.4.0"))
+check("installed missing file → nil (not installed)",
+      InstalledVersion.read(plistPath: "/x", readData: { _ in nil }) == nil)
+check("installed missing key → nil",
+      InstalledVersion.read(plistPath: "/x",
+        readData: { _ in plistBytes(["CFBundleName": "Houdini"]) }) == nil)
+
+func releaseBytes(_ tag: String) -> Data { Data("{\"tag_name\":\"\(tag)\"}".utf8) }
+
+await expectNoThrow("latest parses tag over scripted transport") {
+    let stub = ScriptedTransport([(200, releaseBytes("v0.5.0"))])
+    let v = try await ReleaseResolver.latest(transport: stub.transport)
+    check("latest → 0.5.0, hits /releases/latest, sends NO Authorization",
+          v == SemanticVersion("0.5.0")
+          && stub.requests.first?.url?.absoluteString
+             == "https://api.github.com/repos/vitorsalomao05/houdini/releases/latest"
+          && stub.requests.first?.value(forHTTPHeaderField: "Authorization") == nil)
+}
+do {
+    let stub = ScriptedTransport([(200, releaseBytes("garbage"))])
+    do {
+        _ = try await ReleaseResolver.latest(transport: stub.transport)
+        check("latest rejects non-semver tag", false, "no throw")
+    } catch { check("latest rejects non-semver tag", true) }
+}
+do {
+    let stub = ScriptedTransport([(500, Data())])
+    do {
+        _ = try await ReleaseResolver.latest(transport: stub.transport)
+        check("latest maps HTTP 500 → httpStatus", false, "no throw")
+    } catch let e as UpdateError {
+        check("latest maps HTTP 500 → httpStatus", e == .httpStatus(500), "\(e)")
+    } catch { check("latest maps HTTP 500 → httpStatus", false, "wrong type \(error)") }
+}
+await expectNoThrow("resolve named tag hits tags endpoint") {
+    let stub = ScriptedTransport([(200, releaseBytes("v0.3.0"))])
+    let v = try await ReleaseResolver.resolve(tag: "0.3.0", transport: stub.transport)
+    check("resolve 0.3.0 → tags/v0.3.0",
+          v == SemanticVersion("0.3.0")
+          && stub.requests.first?.url?.absoluteString
+             == "https://api.github.com/repos/vitorsalomao05/houdini/releases/tags/v0.3.0")
+}
+do {
+    let stub = ScriptedTransport([(404, Data())])
+    do {
+        _ = try await ReleaseResolver.resolve(tag: "99.0.0", transport: stub.transport)
+        check("resolve 404 → tagNotFound", false, "no throw")
+    } catch let e as UpdateError {
+        check("resolve 404 → tagNotFound", e == .tagNotFound("v99.0.0"), "\(e)")
+    } catch { check("resolve 404 → tagNotFound", false, "wrong type \(error)") }
+}
+do {
+    let stub = ScriptedTransport([(200, releaseBytes("v0.3.0"))])
+    do {
+        _ = try await ReleaseResolver.resolve(tag: "not-a-version", transport: stub.transport)
+        check("resolve bad version rejected before any request", false, "no throw")
+    } catch { check("resolve bad version rejected before any request", stub.requests.isEmpty) }
+}
+
+let e1Latest = SemanticVersion("0.5.0")!
+check("state: nil installed → notInstalled",
+      UpdateStatus(installed: nil, latest: e1Latest).state == .notInstalled)
+check("state: older installed → updateAvailable",
+      UpdateStatus(installed: SemanticVersion("0.4.0"), latest: e1Latest).state == .updateAvailable)
+check("state: equal → upToDate",
+      UpdateStatus(installed: SemanticVersion("0.5.0"), latest: e1Latest).state == .upToDate)
+check("state: newer installed → ahead",
+      UpdateStatus(installed: SemanticVersion("0.6.0"), latest: e1Latest).state == .ahead)
+
 print("---")
-// DX-06 parity guard: the pinned number of checks this mirror must run — currently equal
-// to the @Test count in Tests/FetcherCoreTests (38 baseline + 15 unit-C2 provider checks).
+// DX-06 parity guard: the pinned number of checks this mirror must run — 53 prior
+// (38 baseline + 15 unit-C2 provider checks) + 18 Phase-E1 update-resolver checks.
 // Adding/removing a check above (or a mirrored @Test) means updating this pin in the SAME
 // commit; any mismatch fails the run, so silent mirror drift is impossible.
-let pinnedCheckCount = 53
+let pinnedCheckCount = 71
 if checks != pinnedCheckCount {
     failures += 1
     print("  ✘ parity — expected exactly \(pinnedCheckCount) checks, ran \(checks) (mirror drift? update the pin)")
