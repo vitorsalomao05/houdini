@@ -1,0 +1,58 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Button from "../components/Button.astro";
+---
+
+<Layout
+  title="Page not found — Houdini"
+  description="That page pulled a vanishing act. Head back to Houdini and see your Claude usage and spend from your Mac's menu bar."
+>
+  <main
+    id="main"
+    tabindex="-1"
+    class="screen relative overflow-hidden px-5 pt-24 sm:px-8 md:pt-20"
+  >
+    <div
+      class="screen-glow pointer-events-none absolute -top-16 left-1/2 -z-10 h-[440px] w-[600px] -translate-x-1/2 opacity-60"
+      aria-hidden="true"
+    >
+    </div>
+
+    <div
+      class="screen-inner mx-auto flex max-w-xl flex-col items-center py-8 text-center"
+    >
+      <p
+        data-enter
+        style="--enter-i: 0"
+        class="font-mono text-xs uppercase tracking-[0.18em] text-accent-text"
+      >
+        Error 404
+      </p>
+      <h1
+        data-enter
+        style="--enter-i: 1"
+        class="mt-4 font-display text-[2.4rem] font-semibold leading-[1.06] sm:text-5xl"
+      >
+        This page pulled a <span class="text-reveal">vanishing act</span>.
+      </h1>
+      <p
+        data-enter
+        style="--enter-i: 2"
+        class="mt-4 text-lg leading-relaxed text-muted"
+      >
+        The link led somewhere that doesn't exist. No trapdoors — just head back
+        and see your Claude usage and spend at a glance.
+      </p>
+      <div
+        data-enter
+        style="--enter-i: 3"
+        class="mt-8 flex flex-wrap items-center justify-center gap-3"
+      >
+        <Button href="/" size="lg">Back to home</Button>
+        <Button href="/reveals" variant="secondary" size="lg">
+          See what it reveals
+        </Button>
+      </div>
+    </div>
+  </main>
+</Layout>

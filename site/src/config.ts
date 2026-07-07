@@ -56,25 +56,22 @@ export const nav = [
   { label: "Guide", href: "/guide" },
 ];
 
-// ── What Houdini reveals (compact icon strip) ────────────────────────────────
+// ── What Houdini reveals ──────────────────────────────────────────────────────
 // The three dimensions Houdini pulls into the open — only what the app can
-// honestly fill (usage %, reset timers, extra-usage dollars). No status badges
-// — co-equal, glanceable.
+// honestly fill (usage %, reset timers, extra-usage dollars). Rendered as the
+// tabs on /reveals; co-equal, glanceable, no status badges.
 export const reveals = [
   {
     title: "Limits",
     body: "Every cap — session and weekly — color-coded before you hit the wall.",
-    icon: "gauge",
   },
   {
     title: "Sessions",
     body: "Your rolling 5-hour window, and exactly when it rolls back to zero.",
-    icon: "clock",
   },
   {
     title: "Spend",
     body: "Dollars spent past your plan, in real time — never a surprise bill.",
-    icon: "dollar",
   },
 ];
 

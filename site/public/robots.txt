@@ -1,0 +1,6 @@
+# Houdini — houdini.salomao.org
+# Open to all crawlers; nothing here is private.
+User-agent: *
+Allow: /
+
+Sitemap: https://houdini.salomao.org/sitemap-index.xml
