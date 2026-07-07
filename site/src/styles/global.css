@@ -19,6 +19,11 @@
   /* The reveal — violet → magenta, with a gold spark. */
   --color-accent: #8b5cf6; /* violet */
   --color-accent-hover: #a855f7; /* violet, bright */
+  /* Eyebrows and small accent labels/links use a lighter violet so 12px text
+     clears WCAG AA with margin: --color-accent is only ~4.66:1 on bg and dips
+     below 4.5:1 on raised surfaces, whereas #9d7bf7 is ~6.2:1 on bg and ~5.3:1
+     on surface-2. Tailwind maps this to text-accent-text. */
+  --color-accent-text: #9d7bf7;
   /* Deeper violet for SOLID fills under white text, so labels clear WCAG AA
      (white on #8b5cf6 is 3.6:1; on #7c3aed it's 5.2:1). The lighter --color-accent
      stays the accent for text, links, borders, and glow. */

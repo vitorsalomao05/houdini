@@ -4,8 +4,11 @@ interface Props {
   title: string;
   subtitle?: string;
   align?: "center" | "left";
+  // The title's heading level. Pages that use this as their primary heading pass
+  // `as="h1"` so the document has exactly one h1; it defaults to h2 for sections.
+  as?: "h1" | "h2";
 }
-const { eyebrow, title, subtitle, align = "center" } = Astro.props;
+const { eyebrow, title, subtitle, align = "center", as: Tag = "h2" } = Astro.props;
 const wrap =
   align === "center"
     ? "mx-auto items-center text-center"
@@ -14,13 +17,13 @@ const wrap =
 
 <div class={`flex max-w-2xl flex-col gap-4 ${wrap}`}>
   <span
-    class="inline-flex items-center gap-2.5 font-mono text-xs uppercase tracking-[0.18em] text-accent"
+    class="inline-flex items-center gap-2.5 font-mono text-xs uppercase tracking-[0.18em] text-accent-text"
   >
     <span
       class="inline-block h-[3px] w-6 rounded-full bg-gradient-to-r from-accent to-magenta"
       aria-hidden="true"></span>
     {eyebrow}
   </span>
-  <h2 class="font-display text-[1.75rem] font-semibold leading-tight sm:text-4xl">{title}</h2>
+  <Tag class="font-display text-[1.75rem] font-semibold leading-tight sm:text-4xl">{title}</Tag>
   {subtitle && <p class="text-base leading-relaxed text-muted sm:text-lg">{subtitle}</p>}
 </div>

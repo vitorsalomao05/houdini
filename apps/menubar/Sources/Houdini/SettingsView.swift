@@ -12,6 +12,12 @@ import AppKit
 /// placeholders (the popover screenshot — pure shapes — still renders faithfully).
 /// We deliberately do **not** reintroduce custom controls just to satisfy the
 /// renderer; native UX/accessibility wins.
+///
+/// Type scales with the user's text-size setting: every label goes through the
+/// shared `scaledFont` (see `SharedUI.swift`) rather than a fixed
+/// `.font(.system(size:))`, and the panel uses a flexible width (min/ideal/max)
+/// so enlarged text grows the window instead of clipping. The `Settings` scene
+/// sizes to content, so height follows automatically.
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var launch: LaunchAtLogin
@@ -21,7 +27,7 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 20) {
             HStack(spacing: 8) {
                 Image(systemName: "gauge.with.dots.needle.67percent").foregroundStyle(.tint)
-                Text("Houdini Settings").font(.system(size: 15, weight: .semibold))
+                Text("Houdini Settings").scaledFont(15, weight: .semibold, relativeTo: .headline)
             }
 
             section("Claude account") {
@@ -30,7 +36,7 @@ struct SettingsView: View {
                 preferCookieToggle
                 if let error = session.lastError {
                     Label(error, systemImage: "exclamationmark.triangle.fill")
-                        .font(.system(size: 11))
+                        .scaledFont(11, relativeTo: .caption)
                         .foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -55,7 +61,7 @@ struct SettingsView: View {
                 launchToggle
                 if let error = launch.lastError {
                     Label(error, systemImage: "exclamationmark.triangle.fill")
-                        .font(.system(size: 11))
+                        .scaledFont(11, relativeTo: .caption)
                         .foregroundStyle(.orange)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -64,13 +70,16 @@ struct SettingsView: View {
             section("About") {
                 row("Version") {
                     Text(Self.appVersion)
-                        .font(.system(size: 13))
+                        .scaledFont(13)
                         .foregroundStyle(.secondary)
                 }
             }
         }
         .padding(22)
-        .frame(width: 360)
+        // Flexible width (was a hard 360) so enlarged Dynamic Type grows the panel
+        // instead of clipping; ideal 360 keeps today's resting size. The Settings
+        // scene sizes height to content, so vertical growth is automatic.
+        .frame(minWidth: 340, idealWidth: 360, maxWidth: 480)
         .background(Color(nsColor: .windowBackgroundColor))
     }
 
@@ -81,8 +90,13 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 6) {
                 Image(systemName: authIcon).foregroundStyle(authColor)
-                Text("Active: ").font(.system(size: 13))
-                    + Text(session.activeAuthLabel).font(.system(size: 13, weight: .semibold))
+                // Two runs (label + bold value) as sibling Texts rather than a
+                // Text(+)Text concatenation, so each can carry the scaledFont
+                // modifier (a View modifier, not composable with Text's `+`).
+                HStack(spacing: 0) {
+                    Text("Active: ").scaledFont(13)
+                    Text(session.activeAuthLabel).scaledFont(13, weight: .semibold)
+                }
             }
             caption(accountContext)
             caption("Houdini reads your existing Claude credential; Anthropic's terms restrict third-party use of subscription OAuth; use at your discretion.")
@@ -136,9 +150,9 @@ struct SettingsView: View {
     private var preferCookieToggle: some View {
         Toggle(isOn: $settings.preferCookieAuth) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Prefer Claude.ai login").font(.system(size: 13))
+                Text("Prefer Claude.ai login").scaledFont(13)
                 Text("Use the cookie even when a Claude Code token exists.")
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                    .scaledFont(11, relativeTo: .caption).foregroundStyle(.secondary)
             }
         }
         .toggleStyle(.switch)
@@ -162,9 +176,9 @@ struct SettingsView: View {
     private var desktopWidgetToggle: some View {
         Toggle(isOn: $settings.showDesktopWidget) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Show desktop widget").font(.system(size: 13))
+                Text("Show desktop widget").scaledFont(13)
                 Text("Drag it anywhere; it remembers its place.")
-                    .font(.system(size: 11)).foregroundStyle(.secondary)
+                    .scaledFont(11, relativeTo: .caption).foregroundStyle(.secondary)
             }
         }
         .toggleStyle(.switch)
@@ -193,8 +207,8 @@ struct SettingsView: View {
             set: { launch.setEnabled($0) }
         )) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Launch at login").font(.system(size: 13))
-                Text(launch.statusText).font(.system(size: 11)).foregroundStyle(.secondary)
+                Text("Launch at login").scaledFont(13)
+                Text(launch.statusText).scaledFont(11, relativeTo: .caption).foregroundStyle(.secondary)
             }
         }
         .toggleStyle(.switch)
@@ -216,7 +230,7 @@ struct SettingsView: View {
                                         @ViewBuilder _ content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title.uppercased())
-                .font(.system(size: 10, weight: .semibold))
+                .scaledFont(10, weight: .semibold, relativeTo: .caption2)
                 .foregroundStyle(.secondary)
             content()
         }
@@ -225,13 +239,13 @@ struct SettingsView: View {
     private func row<Trailing: View>(_ label: String,
                                      @ViewBuilder _ trailing: () -> Trailing) -> some View {
         HStack {
-            Text(label).font(.system(size: 13))
+            Text(label).scaledFont(13)
             Spacer(minLength: 12)
             trailing()
         }
     }
 
     private func caption(_ text: String) -> some View {
-        Text(text).font(.system(size: 11)).foregroundStyle(.secondary)
+        Text(text).scaledFont(11, relativeTo: .caption).foregroundStyle(.secondary)
     }
 }
