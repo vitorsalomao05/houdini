@@ -95,7 +95,12 @@ security posture.
 **Sub-tasks.**
 - [x] Accessibility pass (labels, focus, Dynamic Type, contrast, reduced-motion). *(P2 slice 1 — **DONE, commit `19d3ed0`:** VoiceOver labels/values on gauges·rows·spend·status·footer, keyboard focus ring on footer buttons, `@ScaledMetric` Dynamic Type, AA contrast lift + Increase-Contrast now raises text; reduced-motion already gated.)*
 - [x] Visual polish pass on both surfaces; define shared visual tokens. *(P2 slice 2 — **DONE:** one shared `Theme` token layer — colors · spacing · radii · type · motion — consumed by both the popover and desktop widget; deduped the `#8B5CF6` brand hex, pulled the glass wash/border/ink hexes into one place, unified the popover card radius into the widget's rounded-card family (14→20), unified the gauge/progress tracks + the two state-view rhythms + micro-label tracking + hover/value motion. Slice-1 a11y values (Dynamic Type, AA secondary tone, Increase-Contrast lifts, focus ring) folded into tokens intact; verified via adversarial review.)*
-- [ ] Verify against real Claude Pro/Max data (limits, timers, overage). *(Slice 3 — remains.)*
+- [x] Settings Dynamic Type. *(v1 audit F2, commit `9117725`:* `SettingsView` moved off fixed
+      `.font(.system(size:))` onto the app's shared `scaledFont`/`@ScaledMetric` helper and a
+      flexible `min/ideal/max` width — slice 1 had done this for the popover/widget but not the
+      Settings panel.)*
+- [ ] Verify against real Claude Pro/Max data (limits, timers, overage). *(Slice 3 = v1 audit
+      **F1**, owner-run manual check — remains.)*
 
 ## P3 · Site — Polish to zero-clutter + ongoing features  `[~]`
 
@@ -118,6 +123,15 @@ WCAG-AA clean; concrete gaps captured below.
 - [x] Explicit "Mac → Anthropic, no Houdini server" trust line — decision **revised 2026-07-03**:
       the transparency line is now **mandatory for v1** (ADR-012 §6); implementation queued
       (v1 audit unit B4 — app Settings + site privacy page).
+- [x] **Sub-page AA completion (v1 audit F2, commit `9117725`):** added a single logical
+      `<h1>` to /privacy, /reveals, /surfaces, /faq (all four had started at `<h2>` via
+      `SectionHeader`, which gained an `as` prop); introduced a shared `--color-accent-text`
+      (#9d7bf7) token for eyebrows/small accent links that dipped below AA, and fixed the
+      `text-muted/70` (3.8:1) caption on /reveals. Verified: `npm run build`, one `<h1>`/page,
+      clean heading order.
+- [x] **Site niceties (v1 audit F3, commit `58d65b5`):** "Illustrative sample" caption on the
+      /surfaces menu-bar mock; branded `404.astro`; `@astrojs/sitemap` + `robots.txt`; removed
+      the dead `popover-light.png` asset + unused `icon` config field.
 - [ ] Ongoing site polish + feature/idea stream (tracked in the Parking lot below).
 
 ## P4 · App — Self-update / clean-upgrade command (`houdini update`)  `[x]`
@@ -204,11 +218,16 @@ version, and reports the new version to the user.
 ## Immediate next steps
 
 *Framing + scope sign-off are long done. The login decision (**ADR-012**, P1 capped and shipped),
-the site audit + its ToS-independent quick-wins (commit `78e2bf3`), and P2 slices 1–2 (commits
-`19d3ed0`, `1d8912b`) have all shipped. Current focus:*
+the site audit + its ToS-independent quick-wins (commit `78e2bf3`), P2 slices 1–2 (commits
+`19d3ed0`, `1d8912b`), and the v1 audit Phases A–E + Phase F polish (F2 AA/Dynamic Type `9117725`,
+F3 site niceties `58d65b5`, F4 README hero `2320b84`) have all shipped. The only remaining v1
+work is two gates:*
 
-1. [ ] **P2 slice 3** — verify gauges / reset timers / overage against real Claude Pro/Max data.
-2. [ ] **P3 ongoing** — continue site polish + the feature/idea stream (Parking lot).
+1. [ ] **P2 slice 3 / v1 audit F1** — verify gauges / reset timers / overage against real
+   Claude Pro/Max data (**owner-run** manual check; also validates B1/B3). Last non-gated v1 item.
+2. [ ] **v1 audit Phase G (🔴 gated)** — final QA matrix (G1) then tag/publish **v1.0.0** + deploy
+   the site (G2), every step owner-signed.
+3. [ ] **P3 ongoing** — continue site polish + the feature/idea stream (Parking lot).
 
 ## Parking lot / ideas (ongoing)
 
