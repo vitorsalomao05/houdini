@@ -17,6 +17,47 @@ Replace `X.Y.Z` with the new version (and `P.Q.R` with the previous one).
 
 ---
 
+## ▶ v1.0.0 — SHIPPED 2026-07-07 (v1 — release integrity + self-updater)
+
+The **v1.0.0 milestone**: the v1 audit (Phases A–G) landed — a site/docs truth
+pass, a single **verified CI publisher** (`release.yml` is now the sole builder,
+running core `swift test` + `houdini-selftest` + built-binary `--metrictest` /
+`--widgettest` before it checksums and publishes), network-layer + auth
+hardening, the `houdini update` self-updater, and an accessibility + polish pass
+across the menu bar, desktop widget, and site. **First release built and
+published by CI** — v0.2–v0.4 were hand-built on the dev machine. App bumped to
+**1.0.0** (`apps/menubar/Info.plist` → `CFBundleShortVersionString 1.0.0`,
+build `6`).
+
+Go-live executed in order:
+
+1. [x] Bump every pin in ONE commit `chore(release): bump to v1.0.0`:
+       `apps/menubar/Info.plist` (`1.0.0` / build `6`),
+       `core/Sources/houdini/Version.swift`, `site/src/config.ts`
+       (`version` + `installTag`), `site/package.json` (+ lockfile version
+       fields), `README.md` (one-liner + release link), `install.sh` (`TAG`),
+       and the doc-accuracy refs (`CLAUDE.md`, `CONTEXT.md`, `SECURITY.md`).
+2. [ ] Dry-run the CI publisher from `release/v1.0.0`
+       (`gh workflow run "Release Houdini" --ref release/v1.0.0`) → confirm a
+       green **draft** with all three assets + `SHASUMS256.txt`; delete the draft.
+3. [ ] Fast-forward `release/v1.0.0` → `master`, push, then
+       `git tag v1.0.0 && git push origin v1.0.0`. CI builds, verifies,
+       checksums, and publishes the (immutable) release. **Never** `gh release
+       create` by hand.
+4. [ ] Verify the published `v1.0.0`: three assets (`Houdini.app.zip`, `houdini`,
+       `SHASUMS256.txt`) + green verification steps. Checksums (SHA-256) recorded
+       here post-publish: `Houdini.app.zip` `…`, `houdini` `…`.
+5. [ ] Retitle `v0.4.0` "superseded — do not install" (keep the tag for rollback
+       + the `houdini update` path).
+6. [ ] `cd site && vercel build --prod && vercel deploy --prebuilt --prod`.
+       Production `houdini.salomao.org` serves v1.0.0; routes 200; the live
+       one-liner points at `v1.0.0`.
+7. [ ] Dogfood the updater: from a `v0.4.0` install, `houdini update --check`
+       reports `1.0.0`, then `houdini update` upgrades cleanly (its first real
+       run — re-runs the new tag's verified `install.sh`, rolls back on failure).
+
+---
+
 ## ▶ v0.4.0 — SHIPPED 2026-06-19 (popover redesign)
 
 The menu-bar **popover was redesigned** onto the desktop widget's visual system

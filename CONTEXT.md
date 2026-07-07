@@ -36,7 +36,7 @@ browser, no scraping (a browser-scrape adapter survives only as a last-resort fa
   **pinned Release**, **verifies SHA-256**, and installs **without `sudo`** and **without
   a Gatekeeper prompt** (app → `~/Applications`, CLI → `~/.local/bin`). Safe to re-run;
   offers but never forces launch-at-login.
-- Current release: **v0.4.0**.
+- Current release: **v1.0.0**.
 
 ## Trust & security posture (a first-class selling point)
 
@@ -51,7 +51,7 @@ browser, no scraping (a browser-scrape adapter survives only as a last-resort fa
 ## Current state (2026-07-03)
 
 **App**
-- Claude provider is **live** (v0.4.0). It reads the **Claude Code OAuth token in
+- Claude provider is **live** (v1.0.0). It reads the **Claude Code OAuth token in
   Keychain** *or* a **claude.ai session cookie**.
 - **Claude auth is deliberately KEPT READ-ONLY and its subscription-auth expansion is FROZEN**
   (see **ADR-012**, decided 2026-07-01). Both paths use the user's *existing* on-device

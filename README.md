@@ -19,11 +19,11 @@ in your Keychain.
 ## Install (macOS 14+, Apple Silicon)
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/vitorsalomao05/houdini/v0.4.0/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/vitorsalomao05/houdini/v1.0.0/install.sh | bash
 ```
 
 Downloads the ad-hoc-signed `Houdini.app` + the `houdini` CLI from the pinned
-[`v0.4.0` release](https://github.com/vitorsalomao05/houdini/releases/tag/v0.4.0),
+[`v1.0.0` release](https://github.com/vitorsalomao05/houdini/releases/tag/v1.0.0),
 **verifies their SHA-256** against `SHASUMS256.txt`, then installs without `sudo`
 (app → `~/Applications`, CLI → `~/.local/bin`) — with no Gatekeeper prompt. It
 offers (never forces) launch at login, and is safe to re-run. The desktop widget

@@ -29,7 +29,7 @@ audit/           v1 audit corpus (charter, diagnosis, plan — 2026-07-03)
 **Environment:** macOS 14+ / Apple Silicon. App = Swift / SwiftUI (menu bar + desktop
 widget ship as one SwiftPM executable; no `.xcodeproj`, no full Xcode required — build via
 `apps/menubar/build.sh`). Site = Astro 5 + Tailwind 4. Installer is pinned to a release tag
-(currently `v0.4.0`). New here? Run `scripts/init.sh` to verify your toolchain and print the
+(currently `v1.0.0`). New here? Run `scripts/init.sh` to verify your toolchain and print the
 repo map + real commands + the top BACKLOG item.
 
 ## Source-of-truth docs (read before changing related areas)

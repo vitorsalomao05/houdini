@@ -3,4 +3,4 @@
 // Committed constant — bumped by RELEASE.md §2 alongside
 // `apps/menubar/Info.plist` (`CFBundleShortVersionString`) so every surface
 // reports the same release.
-let houdiniVersion = "0.4.0"
+let houdiniVersion = "1.0.0"

@@ -15,10 +15,10 @@
 #
 # It never reads or prints your Claude token. Read this whole file before piping
 # it to bash — that's the point of pinning it to a tag:
-#   https://raw.githubusercontent.com/vitorsalomao05/houdini/v0.4.0/install.sh
+#   https://raw.githubusercontent.com/vitorsalomao05/houdini/v1.0.0/install.sh
 #
 # Interactive run:
-#   curl -fsSL https://raw.githubusercontent.com/vitorsalomao05/houdini/v0.4.0/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/vitorsalomao05/houdini/v1.0.0/install.sh | bash
 # Unattended (also accept the optional login item):
 #   curl -fsSL .../install.sh | HOUDINI_YES=1 bash
 #
@@ -26,7 +26,7 @@ set -euo pipefail
 
 # ── Pinned source of truth ───────────────────────────────────────────────────
 REPO="vitorsalomao05/houdini"
-TAG="v0.4.0"
+TAG="v1.0.0"
 REL="https://github.com/$REPO/releases/download/$TAG"
 
 APP_NAME="Houdini.app"

@@ -15,7 +15,7 @@ no security fixes. Update to the latest before reporting.
 
 | Version | Supported |
 |---|---|
-| Latest release (currently `v0.4.0`) | ✅ |
+| Latest release (currently `v1.0.0`) | ✅ |
 | Older / superseded releases | ❌ |
 
 ## Reporting a vulnerability

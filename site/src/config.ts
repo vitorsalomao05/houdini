@@ -5,11 +5,11 @@
 // The app/release version this build prepares (shown wherever a current version is
 // referenced). At go-live `installTag` is flipped to `v${version}` so the published
 // one-liner points at this release — see RELEASE.md.
-export const version = "0.4.0";
+export const version = "1.0.0";
 
 // The release tag the installer downloads from. In sync with `v${version}` post
 // go-live; the live one-liner fetches the verified artifacts from this release.
-export const installTag = "v0.4.0";
+export const installTag = "v1.0.0";
 
 export const site = {
   name: "Houdini",
