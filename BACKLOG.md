@@ -220,13 +220,18 @@ version, and reports the new version to the user.
 *Framing + scope sign-off are long done. The login decision (**ADR-012**, P1 capped and shipped),
 the site audit + its ToS-independent quick-wins (commit `78e2bf3`), P2 slices 1–2 (commits
 `19d3ed0`, `1d8912b`), and the v1 audit Phases A–E + Phase F polish (F2 AA/Dynamic Type `9117725`,
-F3 site niceties `58d65b5`, F4 README hero `2320b84`) have all shipped. The only remaining v1
-work is two gates:*
+F3 site niceties `58d65b5`, F4 README hero `2320b84`) have all shipped, and **Phase G
+tagged / CI-published `v1.0.0` and deployed the site (2026-07-07)**. The only remaining open
+v1 item is the owner-run data check:*
 
 1. [ ] **P2 slice 3 / v1 audit F1** — verify gauges / reset timers / overage against real
    Claude Pro/Max data (**owner-run** manual check; also validates B1/B3). Last non-gated v1 item.
-2. [ ] **v1 audit Phase G (🔴 gated)** — final QA matrix (G1) then tag/publish **v1.0.0** + deploy
-   the site (G2), every step owner-signed.
+2. [x] **v1 audit Phase G — SHIPPED 2026-07-07 (🔴 gated, owner-signed).** G1 verification
+   matrix, then G2: `v1.0.0` bumped in one commit, dry-run-verified, fast-forwarded to `master`,
+   tagged, and **CI-published** ([`v1.0.0`](https://github.com/vitorsalomao05/houdini/releases/tag/v1.0.0)
+   — the first release built + published by CI); site deployed. Go-live record + checksums in
+   `RELEASE.md`. Updater `--check` validated live; its mutation dogfood waits for the first
+   post-1.0.0 release (see the `RELEASE.md` v1.0.0 note).
 3. [ ] **P3 ongoing** — continue site polish + the feature/idea stream (Parking lot).
 
 ## Parking lot / ideas (ongoing)
