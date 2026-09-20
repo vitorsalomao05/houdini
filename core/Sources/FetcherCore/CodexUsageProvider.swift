@@ -1,10 +1,10 @@
 import Foundation
 
-/// ChatGPT subscription limits reported by the official Codex client. These are
+/// Codex subscription limits reported by the official client. These are
 /// the returned Codex buckets, not a quota for every feature on chatgpt.com.
 public struct CodexUsageProvider: UsageProvider {
     public let id = "chatgpt-codex"
-    public let displayName = "ChatGPT · Codex"
+    public let displayName = "Codex"
     public let authMethod: AuthMethod = .keychainOAuth
     public let capabilities: Capabilities = [.usagePct, .resetTimer]
     public let refreshInterval: TimeInterval = 60

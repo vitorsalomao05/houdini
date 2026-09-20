@@ -60,7 +60,8 @@ zero consumption. Metrics and in-flight results belong to the selected subscript
 - **Boundary (ADR-012, revised 2026-09-20):** read-only OAuth discovery and saved-cookie access, with official-client connection initiation. No Houdini OAuth refresh, PKCE, new cookie capture, or inference. The documented Claude Code statusline is a separate session-dependent data source, not the source implemented by this slice.
 - **Reference:** `github.com/ttar-p/claude-usage-widget`, `github.com/hamed-elfayome/Claude-Usage-Tracker`.
 
-## chatgpt-codex — ChatGPT · Codex subscription limits
+## chatgpt-codex — Codex subscription limits
+- **Display name:** `Codex`. The stable provider ID remains `chatgpt-codex`; the official protocol account type remains `chatgpt`.
 - **Capabilities:** `usagePct`, `resetTimer`; only the windows actually returned. No billing, invoices, API costs, message-count estimates, or universal ChatGPT quota.
 - **Auth ownership:** `CodexUsageProvider` uses `.keychainOAuth` in the current contract, but the official Codex client owns tokens, persistence, and refresh. Houdini uses account methods; it does not read `auth.json` or token contents.
 - **Protocol:** [Codex App Server](https://learn.chatgpt.com/docs/app-server) JSON-RPC over stdio, with `initialize` / `initialized`, browser `account/login/start`, login-completion notification, `account/read`, and `account/rateLimits/read`. Missing/unsupported clients and process/protocol failures become safe, actionable errors. Browser login is explicit and cancellable; raw output and authentication URLs do not enter diagnostics.
@@ -83,7 +84,7 @@ zero consumption. Metrics and in-flight results belong to the selected subscript
 
 ## Accepted implementation order
 1. Preserve Claude usage reads and replace new embedded sign-in with official Claude Code login.
-2. Add ChatGPT · Codex account connection and supported quota windows.
+2. Add Codex account connection and supported quota windows.
 3. Select one subscription across the app's surfaces and validate switching and connection failures.
 
 API adapters and the former experimental ChatGPT cookie approach are outside this scope
@@ -99,10 +100,10 @@ no per-provider key UI.
 
 ```
 Settings ▸ Subscription
-  Claude | ChatGPT · Codex
+  Claude | Codex
 ```
 
-- **Connect:** Claude launches its official client's browser login; ChatGPT · Codex
+- **Connect:** Claude launches its official client's browser login; Codex
   uses its isolated App Server login. Already-saved Claude cookies remain a fallback.
 - **One active subscription** drives the menu-bar headline, popover, and desktop widget.
   Switching clears displayed metrics and rejects stale results from the previous

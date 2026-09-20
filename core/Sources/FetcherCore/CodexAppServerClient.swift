@@ -11,12 +11,12 @@ public enum CodexClientError: Error, LocalizedError, CustomStringConvertible, Se
 
     public var description: String {
         switch self {
-        case .missingClient: return "Install the official Codex CLI to connect ChatGPT."
+        case .missingClient: return "Install the official Codex CLI to connect."
         case .unsupportedVersion: return "This Codex CLI version is unsupported. Houdini requires Codex 0.150.x."
-        case .needsLogin: return "Connect your ChatGPT subscription in Houdini."
+        case .needsLogin: return "Connect Codex in Houdini."
         case .protocolFailure: return "Codex could not provide subscription data. Try again or reconnect."
         case .timedOut: return "Codex did not respond in time. Try again."
-        case .loginFailed: return "ChatGPT sign-in did not complete. Try connecting again."
+        case .loginFailed: return "Codex sign-in did not complete. Try connecting again."
         case .browserUnavailable: return "The sign-in page could not be opened in your browser."
         }
     }

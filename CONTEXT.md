@@ -14,18 +14,20 @@ Houdini is a **local-first macOS app** (macOS 14+, Apple Silicon) that reveals a
 
 **Claude (Pro/Max) is live today**: 5-hour and weekly limits, reset timers, and any
 extra-usage spend, refreshed about every 60 seconds. The accepted next scope adds
-**ChatGPT · Codex** limits and connections initiated from Houdini through official clients.
+**Codex** limits and connections initiated from Houdini through official clients.
 This work is in validation, not a published capability; see `BACKLOG.md`.
 
-Claude retains its existing usage source and saved-session fallback. ChatGPT data comes
-from Codex's account limits and describes the returned Codex groups, not a universal
-quota for every ChatGPT feature. API spending, subscription billing, invoices, and
+Claude retains its existing usage source and saved-session fallback. Codex data describes
+the quota groups reported by its official client, not a universal quota for every
+ChatGPT feature. API spending, subscription billing, invoices, and
 renewal dates are outside this work (ADR-004/011/012).
 
 ### Subscription vocabulary
 
-- **Subscription:** the selected Claude or ChatGPT account whose supported consumption
+- **Subscription:** the selected Claude or Codex subscription whose supported consumption
   Houdini displays; a provider API account is a separate product.
+- **Codex:** the app's name for quota usage and resets reported by the official Codex client.
+  These limits cover the returned Codex groups.
 - **Quota window:** a provider-reported allowance over a period, with a reported percentage
   and optional reset time. An unavailable value is unknown, never zero by inference.
 - **Reset:** when a quota window renews; it is not the subscription's billing renewal.
@@ -71,7 +73,7 @@ renewal dates are outside this work (ADR-004/011/012).
   then reuses the established credential. Existing OAuth discovery and previously saved
   cookies remain readable. Claude usage access remains a private integration with the
   residual risk recorded in **ADR-012**; launching an official client does not remove it.
-- ChatGPT connections and quota reads use the official Codex App Server with a separate
+- Codex connections and quota reads use the official Codex App Server with a separate
   Houdini authentication scope. Both new connection flows require their official client;
   missing clients lead to installation guidance. See `PROVIDERS.md` for the contract and
   [`subscription scope`](docs/plans/subscription-connections.md) for acceptance criteria.
@@ -101,7 +103,7 @@ real product screenshot/demo, and a distinct trust/privacy section. Accessible b
 ## Priorities (app-first) & why
 
 Current work and validation status live in `BACKLOG.md`. The accepted priority is
-subscription consumption and reliable connection initiation for Claude and ChatGPT · Codex,
+subscription consumption and reliable connection initiation for Claude and Codex,
 using the menu bar, popover, and desktop widget. The paused Release Contract (#3) and
 Installation Lifecycle (#4) WIPs remain separate; this scope does not resume them.
 

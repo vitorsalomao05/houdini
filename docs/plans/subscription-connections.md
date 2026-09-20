@@ -2,16 +2,16 @@
 
 ## Accepted scope
 
-The owner selected subscription consumption, limits, and quota reset times for Claude and ChatGPT. Connections start from Houdini and may use the provider's official client. Billing, invoices, API spending, and the paused Installation Lifecycle/Release Contract WIPs are outside this change.
+The owner selected subscription consumption, limits, and quota reset times for Claude and Codex. Connections start from Houdini and may use the provider's official client. Billing, invoices, API spending, and the paused Installation Lifecycle/Release Contract WIPs are outside this change.
 
 The reported Claude sign-in failure occurs inside Houdini's embedded Google sign-in. The owner's screenshot shows “Something went wrong” and a Bluetooth/device-proximity instruction. It proves a failure in the cross-device authentication step, not a `disallowed_useragent` error or a specific root cause. Some attempts reportedly establish a Claude session despite the error. Automated observation timed out at that step; the original Google failure is not yet reproducibly diagnosed.
 
 ## Delivery criteria
 
-- A user can choose Claude or ChatGPT (Codex) for the menu bar, popover, and desktop widget. The active subscription is named, and switching never shows the other subscription's cached values.
+- A user can choose Claude or Codex (the visible provider names) for the menu bar, popover, and desktop widget. The active subscription is named, and switching never shows the other subscription's cached values.
 - Existing Claude OAuth discovery and saved-session fallback remain readable. New connections launch the official Claude Code browser login, without embedding Google's sign-in or capturing new cookies. Houdini does not refresh or log out the user's Claude Code credential.
 - A successful login-process exit is followed by credential discovery and a usage fetch; process completion alone is not presented as proof of usage access.
-- ChatGPT connections and quota reads use the documented Codex App Server protocol and a Houdini-owned authentication scope. Existing Codex configuration and credentials remain untouched. Persistence uses the system credential store, without fallback to plaintext auth files.
+- Codex connections and quota reads use the documented Codex App Server protocol and a Houdini-owned authentication scope. Existing Codex configuration and credentials remain untouched. Persistence uses the system credential store, without fallback to plaintext auth files.
 - Only actual quota windows are displayed. Missing percentages/resets remain unavailable, and labels identify Codex limits rather than promising a universal ChatGPT quota.
 - Missing official clients have a clear installation link; Houdini does not silently install software. Login can be cancelled and times out safely. Process errors and output never expose credentials, account identifiers, or authentication URLs.
 - Tests exercise fake clients and fake credentials, including cancellation, protocol failures, missing quota fields, and switching during a fetch. No test requires real provider authentication.

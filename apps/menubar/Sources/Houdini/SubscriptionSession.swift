@@ -7,7 +7,7 @@ enum TrackedSubscription: String, CaseIterable, Identifiable {
     case chatgptCodex
 
     var id: String { rawValue }
-    var displayName: String { self == .claude ? "Claude" : "ChatGPT · Codex" }
+    var displayName: String { self == .claude ? "Claude" : "Codex" }
     var shortName: String { self == .claude ? "Claude" : "Codex" }
     var metricChoices: [PrimaryMetricChoice] {
         self == .claude ? PrimaryMetricChoice.allCases : [.auto, .fiveHour, .weekly]
@@ -63,7 +63,7 @@ final class SubscriptionSession: ObservableObject {
         case .claude:
             return "Uses Claude Code to open your browser. Signing in updates your Claude Code session."
         case .chatgptCodex:
-            return "Shows Codex quota windows from your ChatGPT subscription. Other ChatGPT limits are not included."
+            return "Shows quota usage and resets reported by the official Codex client."
         }
     }
     var setupLabel: String { selected == .claude ? "Set up Claude Code…" : "Set up Codex…" }
@@ -97,7 +97,7 @@ final class SubscriptionSession: ObservableObject {
             } catch let error as CodexClientError {
                 self.codexError = error.localizedDescription
             } catch {
-                self.codexError = "ChatGPT sign-in did not finish. Try connecting again."
+                self.codexError = "Codex sign-in did not finish. Try connecting again."
             }
         }
     }

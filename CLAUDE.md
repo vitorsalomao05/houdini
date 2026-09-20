@@ -8,7 +8,7 @@
 
 A local-first **macOS app** for subscription consumption, limits, and quota resets — in
 the menu bar and on the desktop. **Claude (Pro/Max) is live today**; Claude official-client
-connections and **ChatGPT · Codex** limits are the accepted work in validation. No Houdini
+connections and **Codex** limits are the accepted work in validation. No Houdini
 account or server; see ADR-004/011/012 for provider scope and credential boundaries.
 
 Pitch we lead with on the site: *"See your Claude spend at a glance, right from your

@@ -22,7 +22,7 @@ struct MenuBarLabelContent: View {
                 if settings.subscription == .claude {
                     ProviderGlyph()
                 } else {
-                    Image(systemName: "terminal").accessibilityLabel("ChatGPT · Codex")
+                    Image(systemName: "terminal").accessibilityLabel(settings.subscription.displayName)
                 }
                 if isStale {
                     Image(systemName: "exclamationmark.triangle.fill")
