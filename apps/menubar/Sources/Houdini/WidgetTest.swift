@@ -47,9 +47,9 @@ enum WidgetTest {
                   NSScreen.screens.contains { $0.frame.intersects(f) })
         }
         if let lim = c1.contentLimits {
-            check("min content size is card-min + shadow margin (252×182)",
+            check("min content size is card-min + shadow margin (252×182); actual \(lim.min)",
                   lim.min == NSSize(width: 252, height: 182))
-            check("max content size is card-max + shadow margin (512×392)",
+            check("max content size is card-max + shadow margin (512×392); actual \(lim.max)",
                   lim.max == NSSize(width: 512, height: 392))
         }
 

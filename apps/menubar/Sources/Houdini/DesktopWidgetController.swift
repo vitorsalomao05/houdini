@@ -114,16 +114,19 @@ final class DesktopWidgetController: NSObject, NSWindowDelegate {
         panel.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.desktopIconWindow)) + 1)
         panel.collectionBehavior = [.canJoinAllSpaces, .stationary, .ignoresCycle]
 
-        panel.contentMinSize = windowMin
-        panel.contentMaxSize = windowMax
-
         let host = NSHostingView(rootView:
             DesktopWidgetView(model: model, session: session)
                 .environment(\.widgetRenderMode, .live)
                 .tint(.brand)
         )
+        // The controller owns the widget's resize bounds. GeometryReader has no
+        // intrinsic bounds, so the hosting view's defaults would replace the
+        // panel's explicit minimum and maximum with effectively unbounded sizes.
+        host.sizingOptions = []
         host.autoresizingMask = [.width, .height]
         panel.contentView = host
+        panel.contentMinSize = windowMin
+        panel.contentMaxSize = windowMax
         panel.delegate = self
 
         restoreFrame(into: panel)
