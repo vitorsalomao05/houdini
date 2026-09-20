@@ -206,5 +206,6 @@ struct SettingsView: View {
 
     private func caption(_ text: String) -> some View {
         Text(text).scaledFont(11, relativeTo: .caption).foregroundStyle(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }

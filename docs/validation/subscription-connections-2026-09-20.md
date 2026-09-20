@@ -15,7 +15,8 @@ provider login/logout, or signing command was performed.
 | App `--metrictest` | 10 checks passed |
 | App `--widgettest` | Skipped: no display available in the command environment; not a pass |
 | Sample-data rendering | Popover and compact/regular widget rendered for Claude and ChatGPT · Codex; populated layouts inspected |
-| Native controls / keyboard | Pending: automatic approval review rejected launching the isolated preview app; user approval requested |
+| Native controls / layout | Passed in the user-approved offline preview: Claude and ChatGPT · Codex selection, appropriate metric choices, percentage/reset labels, and missing-client error; caption truncation found and fixed |
+| Keyboard / visible focus | Not verified: Tab and arrow keys did not move focus; the preview's runtime `NSApp.isFullKeyboardAccessEnabled` diagnostic reported disabled |
 | Diff checks | Passed |
 | Independent standards review | One missing subscription accessibility label fixed; duplicated metric-availability rule centralized; reviewer confirmed both resolved |
 | Independent spec review | No functional deviation identified |
@@ -24,7 +25,20 @@ provider login/logout, or signing command was performed.
 Native controls are not rendered by SwiftUI `ImageRenderer`; its placeholders are
 not evidence of a broken live control or of successful native UI validation. The
 debug-only `--connection-preview` mode supplies a native offline surface with
-isolated preferences and fake providers. Its launch remains approval-dependent.
+isolated preferences and fake providers. Automatic review initially blocked launch;
+the owner then explicitly approved it, and native inspection was completed. The
+preview showed Claude 32%/95% and Codex 24%/63% with resets, correct provider names,
+and native controls without renderer placeholders. Codex exposes only Auto, 5-hour,
+and Weekly metric choices. A deliberately missing fake Codex executable displayed
+the setup error without making a provider request. Explanatory text now keeps its
+full multiline height when that error is shown. Text and contrast were visually
+checked; no instrumented contrast measurement was performed.
+
+Keyboard navigation remains a validation limitation. An experiment setting
+`AppleKeyboardUIMode` in the preview's volatile argument domain did not enable the
+runtime keyboard-access flag and was removed. The final preview retains only the
+read-only diagnostic banner. No global macOS preference was changed; full keyboard
+navigation and visible focus still need checking in a session with that setting on.
 
 The owner's original screenshot shows a Google cross-device/passkey step with a
 Bluetooth/proximity error. The replacement Claude connection flow delegates to

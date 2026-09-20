@@ -27,6 +27,8 @@ enum ConnectionPreview {
         window.contentView = NSHostingView(rootView: HStack(alignment: .top, spacing: 20) {
             VStack(alignment: .leading) {
                 Text("Sample data · no provider requests").font(.caption).padding(.horizontal, 22)
+                Text("Keyboard navigation: \(app.isFullKeyboardAccessEnabled ? "enabled" : "disabled")")
+                    .font(.caption).padding(.horizontal, 22)
                 SettingsView(settings: settings, launch: LaunchAtLogin(), session: session, model: model,
                              allowsSystemSettings: false)
             }
