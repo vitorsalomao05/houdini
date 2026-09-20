@@ -1,9 +1,10 @@
 # Security Policy
 
-Houdini is a **local-first macOS app**: there is no Houdini server, and your
-provider credentials (the Claude Code OAuth token or a claude.ai session cookie)
-never leave your Mac — they stay in the macOS Keychain and are read on-device to
-call each provider's own endpoint. See the [privacy posture](README.md#privacy-posture)
+Houdini is a **local-first macOS app**: there is no Houdini server. Authentication
+goes directly to the provider. Houdini discovers existing Claude credentials
+locally; the official Codex client owns a separate Houdini session stored in
+Keychain. New sign-ins run through the official clients, with no embedded Google
+login or new Claude cookie capture. Tokens are not logged. See the [privacy posture](README.md#privacy-posture)
 in the README and [ARCHITECTURE.md](ARCHITECTURE.md) for the full trust model.
 
 ## Supported versions
@@ -15,7 +16,7 @@ no security fixes. Update to the latest before reporting.
 
 | Version | Supported |
 |---|---|
-| Latest release (currently `v1.0.0`) | ✅ |
+| Latest release (currently `v1.1.0`) | ✅ |
 | Older / superseded releases | ❌ |
 
 ## Reporting a vulnerability
@@ -35,7 +36,8 @@ no server and no telemetry, private reports are the primary way issues reach us.
 
 ## Scope
 
-In scope: credential handling (Keychain read paths, OAuth/cookie flows), the
+In scope: credential handling (Keychain read paths, official-client process and
+browser boundaries, Codex session isolation, existing Claude OAuth/cookie reads), the
 network layer (the pinned request session, redirect handling), installer integrity
 (`install.sh` SHA-256 verification), and `houdini update`. Out of scope: issues in
 a provider's own service (report those to the provider) and physical/social-

@@ -5,11 +5,11 @@
 > Site: **[houdini.salomao.org](https://houdini.salomao.org)** ·
 > Target: **macOS 14+ / Apple Silicon**.
 
-Houdini is a multi-provider platform for AI usage + cost on macOS. **Claude
-(Pro/Max) is live today** — your 5-hour and weekly limits, reset timers, and
-any extra-usage spend, refreshed about **every 60 seconds**. OpenAI and the
-Anthropic Console are on the roadmap. No account, no server; credentials stay
-in your Keychain.
+Houdini tracks **Claude (Pro/Max) and Codex** subscription consumption, limits,
+and quota resets on macOS. Choose one subscription for the menu bar, popover,
+and desktop widget, refreshed **every 60 seconds by default**. Claude also
+shows extra-usage spend when reported. Start connection in Houdini; the official
+Claude Code or Codex client handles browser sign-in. No Houdini account or server.
 
 <p align="center">
   <img src="docs/popover.png" width="440"
@@ -19,16 +19,24 @@ in your Keychain.
 ## Install (macOS 14+, Apple Silicon)
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/vitorsalomao05/houdini/v1.0.0/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/vitorsalomao05/houdini/v1.1.0/install.sh | bash
 ```
 
 Downloads the ad-hoc-signed `Houdini.app` + the `houdini` CLI from the pinned
-[`v1.0.0` release](https://github.com/vitorsalomao05/houdini/releases/tag/v1.0.0),
+[`v1.1.0` release](https://github.com/vitorsalomao05/houdini/releases/tag/v1.1.0),
 **verifies their SHA-256** against `SHASUMS256.txt`, then installs without `sudo`
 (app → `~/Applications`, CLI → `~/.local/bin`) — with no Gatekeeper prompt. It
 offers (never forces) launch at login, and is safe to re-run. The desktop widget
 ships inside the app (toggle it in Settings) — no separate install. Read it
 first — it's at [`install.sh`](install.sh).
+
+In Settings, choose **Claude** or **Codex** and connect. Claude uses an existing
+Claude Code credential or starts `claude auth login --claudeai`; that sign-in
+updates your Claude Code session. Codex requires the official **Codex CLI
+0.150.x** and uses a separate Houdini session managed by that client in Keychain,
+leaving your normal Codex login and configuration unchanged. Missing clients
+and unsupported versions have setup guidance in the app. The shipped `houdini`
+CLI continues to expose its existing providers; Codex selection is in the macOS app.
 
 Houdini is **one app** with two co-equal, user-facing features (the website brands
 neither separately — see ADR-010/011):
@@ -50,7 +58,7 @@ launch-at-login left exactly as you set it), then reports the new version:
 ```sh
 houdini update            # update to the latest release
 houdini update --check    # dry-run: show installed vs. latest, change nothing
-houdini update 0.5.0      # install a specific release (incl. rollback to an older one)
+houdini update 1.1.0      # install a specific release (incl. rollback to an older one)
 ```
 
 It updates only what it installed — `~/Applications/Houdini.app` and
@@ -60,19 +68,28 @@ new version.
 
 ## The core idea (read this first)
 
-The naive approach is "open a logged-in page in a background browser, reload every minute, scrape the number." We researched this and found a **much better path**: most AI usage numbers are backed by a **JSON endpoint**, not just rendered HTML. So instead of driving a browser, Houdini reads the user's existing credential (Keychain OAuth token or session cookie) and calls the JSON endpoint directly. This is lighter (~6 MB native vs hundreds of MB of bundled Chromium), more robust (no DOM breakage), and far easier to sign/notarize.
+Houdini reads structured usage data rather than scraping a browser. Claude uses
+an existing local credential with the private usage endpoints; previously saved
+Claude.ai cookies remain a fallback. New Claude connections go through Claude
+Code's browser login, with no embedded Google sign-in or new cookie capture.
+The endpoints remain undocumented, and Anthropic's restrictions on third-party
+subscription OAuth remain a risk (ADR-012).
 
-The background-browser scrape survives only as a **last-resort fallback adapter** for providers that genuinely have no readable endpoint.
+Codex exposes account and quota methods through its official App Server. The
+official client owns tokens, persistence, and refresh; Houdini reads the returned
+quota windows. It does not infer missing windows, token counts, API costs, or a
+universal ChatGPT allowance.
 
 ## Providers
 
 | Provider | Source | Method | Status |
 |---|---|---|---|
 | **Claude (Pro/Max)** | `api.anthropic.com/api/oauth/usage` (Claude Code OAuth token in Keychain) **or** `claude.ai/api/organizations/{org}/usage` (session cookie) | JSON | **Live** |
+| **Codex** | Official Codex App Server account and rate-limit methods | JSON-RPC over local stdio | **Live in macOS app** |
 | **OpenAI Platform** (API usage/cost) | `/v1/organization/usage/*`, `/v1/organization/costs` | JSON (admin key) | Planned |
 | **Anthropic Console** (API usage/cost) | Admin API `usage_report` / `cost_report` | JSON (admin key) | Planned |
 
-See [`PROVIDERS.md`](PROVIDERS.md) for the full adapter contract and per-provider specs (including the experimental ChatGPT-Plus path), [`ARCHITECTURE.md`](ARCHITECTURE.md) for the system design, [`DECISIONS.md`](DECISIONS.md) for the ADRs, and [`ROADMAP.md`](ROADMAP.md) for the phased plan.
+See [`PROVIDERS.md`](PROVIDERS.md) for the adapter contract and per-provider specs, [`ARCHITECTURE.md`](ARCHITECTURE.md) for the system design, [`DECISIONS.md`](DECISIONS.md) for the ADRs, and [`ROADMAP.md`](ROADMAP.md) for the phased plan.
 
 ## Repo layout
 
@@ -103,13 +120,24 @@ repo map, the real build/test/run commands, and the current top backlog item.
 
 ## Privacy posture
 
-Credentials never leave the device. Tokens/cookies live in the macOS Keychain. No Houdini server ever sees them — there is none. Requests go straight from your Mac to each provider's own endpoint. The landing site has a dedicated trust/privacy section because the app touches logins.
+Authentication goes directly to each provider; there is no Houdini server.
+Houdini reads an existing Claude credential locally without refreshing or rewriting
+it. The official Codex client stores Houdini's separate session in Keychain;
+Houdini never reads Codex token contents. Tokens and authentication URLs are not
+logged. See [`PROVIDERS.md`](PROVIDERS.md) for storage boundaries and the site's
+[privacy page](https://houdini.salomao.org/privacy) for the Claude integration's
+remaining restrictions.
 
 ## Uninstall
 
-Houdini installs to two paths in your home folder and — only if you signed in to
-claude.ai in-app — keeps one session in your Keychain. To remove all of it, quit
-Houdini (menu bar ▸ Quit), then:
+Quit Houdini (menu bar ▸ Quit). If you connected Codex, first ask its official
+client to remove only Houdini's separate session; skip this command otherwise:
+
+```sh
+CODEX_HOME="$HOME/Library/Application Support/Houdini/Codex" codex logout -c 'cli_auth_credentials_store="keyring"'
+```
+
+Then remove the installed files and local preferences:
 
 ```sh
 # If you enabled launch-at-login, unregister it first:
@@ -125,10 +153,15 @@ defaults delete org.salomao.houdini 2>/dev/null || true
 # Remove the claude.ai session Houdini stored (only exists if you used the
 # cookie sign-in). The Claude Code OAuth token is Claude Code's own — left alone:
 security delete-generic-password -s Houdini-claude-session 2>/dev/null || true
+
+# After Codex logout, remove Houdini's isolated client state:
+rm -rf "$HOME/Library/Application Support/Houdini/Codex"
 ```
 
-That's everything Houdini owns. It never touches your Claude Code credential
-(`Claude Code-credentials`), `~/.claude/`, or any provider data.
+These removal steps preserve your Claude Code credential
+(`Claude Code-credentials`), `~/.claude/`, and your usual `~/.codex` login and
+configuration. Initiating a Claude connection earlier may have updated the
+Claude Code session through that official client.
 
 ## License
 

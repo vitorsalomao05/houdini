@@ -5,18 +5,18 @@
 // The app/release version this build prepares (shown wherever a current version is
 // referenced). At go-live `installTag` is flipped to `v${version}` so the published
 // one-liner points at this release — see RELEASE.md.
-export const version = "1.0.0";
+export const version = "1.1.0";
 
 // The release tag the installer downloads from. In sync with `v${version}` post
 // go-live; the live one-liner fetches the verified artifacts from this release.
-export const installTag = "v1.0.0";
+export const installTag = "v1.1.0";
 
 export const site = {
   name: "Houdini",
   // The reveal — the product promise, kept across the home and the OG card.
   tagline: "See your AI usage and spend, revealed.",
   description:
-    "Houdini is a local-first macOS app that reveals your AI usage and spend — in your menu bar and on your desktop. Your Claude limits, reset timers, and extra-usage dollars, refreshed every 60 seconds. No account, no server; credentials stay in your Keychain.",
+    "Claude and Codex usage, limits, and reset timers — in your Mac's menu bar and on your desktop. Connect through the official clients, refresh every 60 seconds by default. No Houdini account or server.",
   // Canonical origin (canonical + Open Graph): the Houdini subdomain on Vercel.
   domain: "https://houdini.salomao.org",
   // Real 1200×630 social card in public/og.png (regenerate: node scripts/og/build.mjs).
@@ -63,15 +63,15 @@ export const nav = [
 export const reveals = [
   {
     title: "Limits",
-    body: "Every cap — session and weekly — color-coded before you hit the wall.",
+    body: "Claude and Codex quota windows, color-coded so you can see how much is left. Only the limits your provider reports appear.",
   },
   {
     title: "Sessions",
-    body: "Your rolling 5-hour window, and exactly when it rolls back to zero.",
+    body: "The reset time for each available window, including 5-hour and weekly limits when your provider returns them.",
   },
   {
     title: "Spend",
-    body: "Dollars spent past your plan, in real time — never a surprise bill.",
+    body: "Claude extra-usage spend against your budget, when enabled and reported. Codex shows subscription quotas; API billing is not included.",
   },
 ];
 
@@ -93,23 +93,27 @@ export const surfaces = [
 export const faqs = [
   {
     q: "Is Houdini really installable today?",
-    a: "Yes. The one-liner installs Houdini right now — ad-hoc signed with a hardened runtime, so it opens with no Gatekeeper prompt. You're not waiting for anything to start tracking Claude.",
+    a: "Yes. The one-liner installs Houdini — ad-hoc signed with a hardened runtime, with checksum verification and no sudo. Choose Claude or Codex in Settings and connect through the matching official client.",
   },
   {
-    q: "Do my credentials ever leave my Mac?",
-    a: "No. There is no Houdini account and no Houdini server. Houdini reads the credential already on your machine — your Claude Code OAuth token, or a claude.ai session you sign in to in a native window — and calls the provider directly from your Mac. Tokens stay in your Keychain.",
+    q: "Where do my credentials go?",
+    a: "Authentication goes directly to your provider; there is no Houdini server. Houdini reads an existing Claude credential locally. The official Codex client owns its login and stores Houdini's separate session in the macOS Keychain. Houdini does not log tokens or ask you to paste them.",
   },
   {
     q: "Which AI providers does it work with?",
-    a: "Claude Pro and Max work today — your limits, reset timers, and extra-usage spend. Houdini is Claude-first; more providers can come as they open up, and it never shows a gauge it can't honestly fill.",
+    a: "Claude Pro/Max and Codex. Select one subscription for the menu bar and desktop widget. Claude includes available usage windows and extra-usage spend; Codex includes the quota windows returned by its official client. Codex limits are not a universal ChatGPT allowance, and API billing is not included.",
   },
   {
     q: "How does it read my Claude usage?",
-    a: "If you use Claude Code, Houdini reuses its OAuth token from the Keychain — zero new logins. Otherwise you sign in to claude.ai in a native window; the session is kept in your Keychain and reused until it expires — you'll sign in again when it does. It then calls the same usage endpoint the official tools do.",
+    a: "Houdini discovers your existing Claude Code credential. To connect or renew it, choose Connect Claude in Settings: Claude Code opens the browser and owns the sign-in. Previously saved Claude.ai sessions remain a fallback. Usage still comes from undocumented endpoints; Anthropic restricts third-party subscription OAuth use, so this integration carries that risk.",
+  },
+  {
+    q: "How do I connect Codex?",
+    a: "Install the official Codex CLI 0.150.x, choose Codex in Houdini Settings, and select Connect Codex. Complete sign-in in your browser. Houdini uses a separate session managed by the official client, leaving your usual Codex login and configuration unchanged. Other client versions show an explicit compatibility message.",
   },
   {
     q: "Does it really refresh every 60 seconds?",
-    a: "Yes — a true 60-second timer, in the menu bar and the desktop widget alike, so the headline number is always current.",
+    a: "The default is a 60-second timer for both surfaces; Settings also offers 30 or 120 seconds. Provider failures can delay updates, and Houdini shows the reading's age or an error instead of treating missing usage as zero.",
   },
   {
     q: "What does it cost?",

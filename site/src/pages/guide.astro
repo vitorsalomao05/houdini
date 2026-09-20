@@ -62,8 +62,8 @@ const thresholds = [
           Get started in minutes.
         </h1>
         <p data-enter style="--enter-i: 2" class="mt-4 text-lg leading-relaxed text-muted">
-          Houdini reveals what your AI is really using and costing you — without
-          an account, a server, or your secrets ever leaving your Mac. Here's the
+          Houdini reveals your Claude and Codex usage, limits, and reset timers — without
+          a Houdini account or server. Here's the
           whole act, one card at a time. Step through it, or jump to any part.
         </p>
       </div>
@@ -135,17 +135,17 @@ const thresholds = [
           <div class="rounded-card border border-border bg-surface/50 p-5">
             <h3 class="font-semibold">Developers on a subscription</h3>
             <p class="mt-1.5 text-sm leading-relaxed text-muted">
-              You run Claude Code or Claude Pro/Max all day and want to know how
+              You use Claude Pro/Max or Codex all day and want to know how
               close you are to the 5-hour or weekly wall before it stops you
               mid-task.
             </p>
           </div>
           <div class="rounded-card border border-border bg-surface/50 p-5">
-            <h3 class="font-semibold">People paying per API call</h3>
+            <h3 class="font-semibold">People switching between subscriptions</h3>
             <p class="mt-1.5 text-sm leading-relaxed text-muted">
-              You'd rather watch the dollars add up in real time than find out
-              at the end of the month. Houdini is built for this — it arrives
-              with the first API provider.
+              Choose Claude or Codex in Settings. The menu bar, popover, and
+              desktop widget follow that choice, so every surface shows the
+              same subscription.
             </p>
           </div>
         </div>
@@ -154,9 +154,9 @@ const thresholds = [
       <!-- 3 · What it tracks -->
       <StepCard slug="tracks" index={3} total={total} title="3 · What it tracks">
         <p class="leading-relaxed text-muted">
-          There are two kinds of "usage", and Houdini is built to speak both.
-          Today it reveals your Claude subscription in full — every window, timer,
-          and extra-usage dollar.
+          Houdini shows the usage windows your selected subscription returns.
+          Claude can also report model-specific windows and extra-usage spend.
+          Codex limits describe Codex usage, not a universal ChatGPT allowance.
         </p>
         <dl class="mt-6 space-y-3">
           <div class="rounded-card border border-border bg-surface/50 p-5">
@@ -165,9 +165,9 @@ const thresholds = [
               <span class="font-mono text-[11px] font-normal text-ok">Live</span>
             </dt>
             <dd class="mt-1.5 text-sm leading-relaxed text-muted">
-              Your rolling <strong class="text-text">5-hour</strong> limit — the
-              one that throttles a long coding session. Shown as a percent of the
-              window used.
+              Your <strong class="text-text">5-hour</strong> limit, when reported,
+              shown as the percentage of the window used. Missing windows do not
+              appear as empty gauges.
             </dd>
           </div>
           <div class="rounded-card border border-border bg-surface/50 p-5">
@@ -176,9 +176,9 @@ const thresholds = [
               <span class="font-mono text-[11px] font-normal text-ok">Live</span>
             </dt>
             <dd class="mt-1.5 text-sm leading-relaxed text-muted">
-              The <strong class="text-text">7-day</strong> cap, plus the
-              model-specific weekly (Sonnet / Opus) so a heavy week on one model
-              is visible on its own.
+              The <strong class="text-text">7-day</strong> cap, when reported.
+              Claude can include model-specific weekly limits (Sonnet / Opus);
+              Codex can return multiple quota groups with their own names.
             </dd>
           </div>
           <div class="rounded-card border border-border bg-surface/50 p-5">
@@ -187,8 +187,8 @@ const thresholds = [
               <span class="font-mono text-[11px] font-normal text-ok">Live</span>
             </dt>
             <dd class="mt-1.5 text-sm leading-relaxed text-muted">
-              Every window shows exactly when it rolls back to zero — so "wait it
-              out" becomes a real decision, not a guess.
+              Windows show a countdown when the provider supplies a reset time.
+              An absent reset time stays absent; Houdini does not estimate one.
             </dd>
           </div>
           <div class="rounded-card border border-border bg-surface/50 p-5">
@@ -214,45 +214,45 @@ const thresholds = [
         title="4 · Connect a provider"
       >
         <p class="leading-relaxed text-muted">
-          Houdini never asks you to paste a secret into a web form. It reuses a
-          credential you already have, kept in your macOS Keychain.
+          Choose a subscription in Settings, then use its Connect button.
+          The official client opens browser sign-in. Houdini never asks you to
+          paste a token or password into the app.
         </p>
 
         <div class="mt-6 rounded-card ring-grad p-5">
           <div class="flex items-center gap-2">
-            <h3 class="font-semibold">Claude</h3>
+            <h3 class="font-semibold">Claude and Codex</h3>
             <span class="font-mono text-[11px] text-ok">Live</span>
           </div>
           <p class="mt-2 text-sm leading-relaxed text-muted">
-            Two ways in — pick whichever you already have:
+            Settings links to the official client setup if it is missing:
           </p>
           <ul class="mt-3 space-y-3 text-sm leading-relaxed text-muted">
             <li class="flex gap-3">
               <span class="font-mono text-accent-hover">A</span>
               <span>
-                <strong class="text-text">You use Claude Code.</strong> Houdini
-                reuses its OAuth token straight from the Keychain. Nothing to set
-                up — install and it's already reading.
+                <strong class="text-text">Claude.</strong> Houdini discovers a
+                usable Claude Code credential. Connect Claude starts Claude Code's
+                browser sign-in and updates that client's session. Previously
+                saved Claude.ai sessions remain a fallback.
               </span>
             </li>
             <li class="flex gap-3">
               <span class="font-mono text-accent-hover">B</span>
               <span>
-                <strong class="text-text">You don't.</strong> Open Houdini's
-                settings and sign in to claude.ai in a native window. The
-                session is kept in your Keychain and reused until it expires —
-                you'll sign in again when it does.
+                <strong class="text-text">Codex.</strong> Install the official
+                Codex CLI 0.150.x, choose Connect Codex, and complete browser
+                sign-in. Its separate Houdini session stays in your Keychain;
+                your usual Codex login and configuration stay unchanged.
               </span>
             </li>
           </ul>
         </div>
 
         <p class="mt-4 text-sm leading-relaxed text-muted">
-          Houdini's core is provider-agnostic — every source plugs into the same
-          capability-driven model. As more of the AI you pay for is supported,
-          each one connects with a credential you already hold, kept in the
-          Keychain the same way. Houdini never shows a gauge it can't honestly
-          fill.
+          A completed browser screen is not the final check: Houdini shows a
+          connected state only after it can read usage. An expired session,
+          unavailable client, or unsupported client version gets an explicit message.
         </p>
       </StepCard>
 
@@ -301,8 +301,8 @@ const thresholds = [
             By default Houdini shows your <strong class="text-text">tightest</strong
             > limit — whichever window is closest to full — so the headline is
             always the one that matters. In Settings you can pin it to a specific
-            metric instead: the 5-hour window, the weekly cap, the model-specific
-            weekly, or your extra-usage spend (shown as <span
+            metric instead: the 5-hour window or the weekly cap. Claude also offers
+            the model-specific weekly and extra-usage spend (shown as <span
               class="font-mono text-text">$93/100</span
             > rather than a percent).
           </p>
@@ -317,8 +317,8 @@ const thresholds = [
         title="6 · Subscription vs. API usage"
       >
         <p class="leading-relaxed text-muted">
-          The two billing worlds work differently — so Houdini measures them
-          differently.
+          Houdini tracks subscription quotas. API billing is a separate service
+          and is not included in this release.
         </p>
         <div class="mt-6 overflow-hidden rounded-card border border-border">
           <div class="overflow-x-auto">
@@ -340,27 +340,27 @@ const thresholds = [
             >
               <tr class="bg-surface/40">
                 <th scope="row" class="font-medium text-muted">You pay</th>
-                <td class="text-muted">A flat monthly plan (Pro or Max)</td>
+                <td class="text-muted">A subscription plan</td>
                 <td class="text-muted">Per request — dollars per million tokens</td
                 >
               </tr>
               <tr class="bg-surface/20">
                 <th scope="row" class="font-medium text-muted">The limit is</th>
-                <td class="text-muted">A usage window — 5-hour and weekly</td>
+                <td class="text-muted">The quota windows your provider reports</td>
                 <td class="text-muted">Your budget; spend keeps climbing</td>
               </tr>
               <tr class="bg-surface/40">
                 <th scope="row" class="font-medium text-muted">Houdini shows</th>
                 <td class="text-muted"
-                  >% of each window + reset time + extra-usage $</td
+                  >Available usage % and reset time; Claude extra-usage $</td
                 >
                 <td class="text-muted"
-                  >$ spent this period — with the first API provider</td
+                  >Not included</td
                 >
               </tr>
               <tr class="bg-surface/20">
                 <th scope="row" class="font-medium text-muted">Connects with</th>
-                <td class="text-muted">Claude Code token or a claude.ai login</td>
+                <td class="text-muted">Official Claude Code or Codex client</td>
                 <td class="text-muted">An API / admin key</td>
               </tr>
             </tbody>
@@ -368,10 +368,9 @@ const thresholds = [
           </div>
         </div>
         <p class="mt-3 text-sm leading-relaxed text-muted">
-          On a subscription there's no API key and no per-token bill — you're
-          tracking how much of your window is left. With an API key you're
-          tracking spend. Houdini is built to put both in the same menu bar; your
-          Claude subscription is revealed there today.
+          Subscription gauges show how much of a quota window is used. They are
+          not token counters, invoices, or API costs. Houdini only shows a metric
+          when the provider returns data for it.
         </p>
       </StepCard>
 
@@ -391,9 +390,10 @@ const thresholds = [
             <h3 class="font-semibold text-text">Stays local</h3>
             <ul class="mt-2 space-y-2 text-sm leading-relaxed text-muted">
               <li>
-                · Your tokens and cookies — in the macOS Keychain, read but never
-                copied out.
+                · Existing Claude credentials, discovered locally; Houdini does
+                not refresh or rewrite them.
               </li>
+              <li>· Codex's separate Houdini session — stored by the official client in Keychain.</li>
               <li>· Your usage numbers — fetched and rendered on-device.</li>
               <li>· Your settings — in local preferences.</li>
             </ul>
@@ -401,7 +401,7 @@ const thresholds = [
           <div class="rounded-card border border-border bg-surface/50 p-5">
             <h3 class="font-semibold text-text">Leaves your Mac</h3>
             <ul class="mt-2 space-y-2 text-sm leading-relaxed text-muted">
-              <li>· One request, straight to your provider's own endpoint.</li>
+              <li>· Login and usage requests to your provider's own endpoints.</li>
               <li>
                 · Signed with your own credential — no proxy, no Houdini server.
               </li>

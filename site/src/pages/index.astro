@@ -11,7 +11,7 @@ import popoverDark from "../assets/popover-dark.png";
 const trust = [
   { label: "Runs on your Mac", path: "M12 2 4 5v6c0 5 3.4 8.3 8 10 4.6-1.7 8-5 8-10V5l-8-3Z" },
   {
-    label: "Keychain-kept credentials",
+    label: "Official-client sign-in",
     path: "M7 11V8a5 5 0 0 1 10 0v3m-11 0h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1Z",
   },
   { label: "Open source", path: "m9 18-6-6 6-6m6 0 6 6-6 6" },
@@ -80,7 +80,7 @@ const trust = [
             <span class="absolute inline-flex h-full w-full animate-ping rounded-full bg-ok opacity-60"></span>
             <span class="relative inline-flex h-2 w-2 rounded-full bg-ok"></span>
           </span>
-          Live for Claude Pro · Max
+          Claude · Codex
         </span>
 
         <h1
@@ -93,9 +93,9 @@ const trust = [
         </h1>
 
         <p data-enter style="--enter-i: 3" class="max-w-xl text-lg leading-relaxed text-muted">
-          Your Claude limits, reset timers, and extra-usage dollars — in your menu
-          bar and on your desktop, refreshed every 60 seconds. No account, no
-          server — your Mac talks only to your provider.
+          Your Claude and Codex usage, limits, and reset timers — in your menu
+          bar and on your desktop, refreshed every 60 seconds by default. No Houdini
+          account or server — your Mac talks directly to your provider.
         </p>
 
         <!-- The dominant CTA: the install one-liner, copy-ready. -->
@@ -130,7 +130,7 @@ const trust = [
             </a>
           </div>
           <p class="text-sm text-muted">
-            Built for <span class="text-reveal">Claude</span> — more providers as they open up.
+            Choose <span class="text-reveal">Claude or Codex</span> in Settings. Connect through the official clients.
           </p>
           <ul class="flex flex-wrap items-center gap-x-5 gap-y-2">
             {

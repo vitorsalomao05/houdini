@@ -17,7 +17,7 @@ const limitGauges = [
 
 <Layout
   title="What Houdini reveals — Limits, Sessions, Spend"
-  description="The numbers Houdini pulls into the open: your Claude limits, your rolling session window, and extra-usage spend — color-coded and refreshed every 60 seconds."
+  description="Claude and Codex quota windows and reset timers, plus Claude extra-usage spend when available — color-coded and refreshed every 60 seconds by default."
 >
   <main id="main" tabindex="-1" class="screen relative overflow-hidden px-5 pt-24 sm:px-8 md:pt-20">
     <div
@@ -32,7 +32,7 @@ const limitGauges = [
           as="h1"
           eyebrow="What it reveals"
           title="Every number your AI keeps backstage."
-          subtitle="Houdini pulls your real limits, timers, and spend into the open — so a throttle or a bill never catches you off guard."
+          subtitle="See the quota windows your selected subscription reports, their reset timers, and Claude extra-usage spend when available."
           align="left"
         />
       </div>
@@ -81,7 +81,7 @@ const limitGauges = [
                     {t.body}
                   </p>
                   <p class="mt-4 font-mono text-xs text-muted">
-                    Illustrative sample · live in the app every 60s
+                    Illustrative Claude sample · default refresh 60s
                   </p>
                 </div>
 
@@ -135,7 +135,7 @@ const limitGauges = [
                         <div class="h-full rounded-full bg-danger" style="width:93%" />
                       </div>
                       <p class="mt-4 font-mono text-xs text-muted">
-                        Real-time · never a surprise bill
+                        Claude extra usage · when reported
                       </p>
                     </div>
                   )}

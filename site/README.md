@@ -33,12 +33,13 @@ npm run preview  # serve the built dist/ locally
 - Accessible by design: WCAG AA contrast, visible keyboard focus, `prefers-reduced-motion`
   respected, on-scroll reveals gated behind `html.js` so the page is fully visible without JS.
 - Honest copy: no fabricated social proof, and **no "coming soon" placeholders** — a surface
-  is real and shown, or absent (ADR-010). Capability is one honest line: Claude today,
-  built to grow.
+  is real and shown, or absent (ADR-010). Capability is one honest line: Claude and
+  Codex subscription usage, limits, and resets. Codex is not a universal ChatGPT quota.
 - No provider API/admin key ever lives in this site or the repo — keys belong only in the
   app's macOS Keychain (ADR-011).
 - Deploy: **Vercel** — root directory `site`, framework Astro, build `npm run build`,
   output `dist`. Live at https://houdini.salomao.org. Production deploys with
-  `vercel --prod` from `site/`; `vercel deploy` (no `--prod`) makes a review-only preview.
+  `vercel build --prod` then `vercel deploy --prebuilt --prod` from `site/`;
+  `vercel deploy` (no `--prod`) makes a review-only preview.
 - OG card: `node scripts/og/build.mjs` regenerates `public/og.png` (1200×630, rendered
   with headless Chrome from an inlined HTML template).

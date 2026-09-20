@@ -3,16 +3,16 @@ import Layout from "../layouts/Layout.astro";
 import SectionHeader from "../components/SectionHeader.astro";
 import { links } from "../config";
 
-// The four pillars, verbatim from the original Privacy section.
+// The four pillars of the current connection model.
 const points = [
   {
     title: "Everything runs on your Mac",
-    body: "There is no Houdini server — none exists to receive your data. The app polls usage locally and renders it. Nothing about your account leaves the device.",
+    body: "There is no Houdini server to receive your data. Your Mac requests usage directly from the provider and renders it locally.",
     path: "M12 2 4 5v6c0 5 3.4 8.3 8 10 4.6-1.7 8-5 8-10V5l-8-3Z",
   },
   {
-    title: "Credentials stay in your Keychain",
-    body: "Houdini reuses the Claude Code OAuth token already in your Keychain, or — if you sign in to Claude.ai — stores that session there too. Read locally, never copied out, never logged.",
+    title: "Sign in through the official clients",
+    body: "Claude Code owns new Claude sign-ins; Houdini reads an existing credential. Codex owns a separate Houdini session stored in the macOS Keychain. Houdini never logs tokens or asks you to paste them.",
     path: "M7 11V8a5 5 0 0 1 10 0v3m-11 0h12a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1Z",
   },
   {
@@ -30,7 +30,7 @@ const points = [
 
 <Layout
   title="Privacy & trust — Houdini"
-  description="An app that touches your logins should earn it. Houdini runs entirely on your Mac, keeps credentials in your Keychain, talks only to your providers, and is open source end to end."
+  description="Houdini runs locally, starts sign-in through the official Claude Code and Codex clients, sends authentication only to your providers, and is open source end to end."
 >
   <main id="main" tabindex="-1" class="screen relative overflow-hidden px-5 pt-24 sm:px-8 md:pt-20">
     <div
@@ -45,7 +45,7 @@ const points = [
           as="h1"
           eyebrow="Privacy & trust"
           title="An app that touches your logins should earn it."
-          subtitle="Houdini only works if you trust it with a credential. So the design rule is simple: your secrets never leave your Mac."
+          subtitle="Authentication goes directly to your provider. Houdini has no backend, telemetry, or account of its own."
           align="left"
         />
       </div>
@@ -82,10 +82,12 @@ const points = [
       </div>
 
       <p data-enter style="--enter-i: 5" class="mt-6 max-w-2xl text-sm leading-relaxed text-muted">
-        No telemetry, no analytics, no account. The whole project is open-source, so
+        No Houdini telemetry, analytics, or account. The whole project is open-source, so
         you can read exactly what it does before you run it. Houdini reads your existing
         Claude credential; Anthropic's terms restrict third-party use of subscription
-        OAuth; use at your discretion.
+        OAuth. Starting sign-in with Claude Code does not remove that risk or make
+        the undocumented usage endpoints stable. Previously saved Claude.ai sessions
+        remain readable; Houdini no longer captures new sessions in an embedded browser.
       </p>
     </div>
   </main>

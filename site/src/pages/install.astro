@@ -10,7 +10,7 @@ import { installOneLiner, installFromSource, links, surfaces } from "../config";
 // slugs (/install#connect, /install#widget, …).
 const steps = [
   { slug: "install", label: "Run the command" },
-  { slug: "connect", label: "Connect Claude" },
+  { slug: "connect", label: "Connect a subscription" },
   { slug: "widget", label: "Desktop widget" },
   { slug: "done", label: "You're set" },
 ];
@@ -23,7 +23,10 @@ const panelClass =
   "mt-4 rounded-card border border-border/70 bg-surface-2/40 p-4 text-sm leading-relaxed text-muted";
 
 // Static uninstall commands — kept local to this page (not in config.ts).
-const uninstall = `# If you enabled launch-at-login, unregister it first:
+const uninstall = `# If you connected Codex, remove only Houdini's separate session:
+CODEX_HOME="$HOME/Library/Application Support/Houdini/Codex" codex logout -c 'cli_auth_credentials_store="keyring"'
+
+# If you enabled launch-at-login, unregister it first:
 "$HOME/Applications/Houdini.app/Contents/MacOS/Houdini" --unregister-login-item
 
 # Remove the app and the CLI:
@@ -37,7 +40,7 @@ security delete-generic-password -s Houdini-claude-session 2>/dev/null || true`;
 
 <Layout
   title="Install — Houdini"
-  description="A guided setup for Houdini: run one command, connect Claude, choose your surfaces. macOS 14+, Apple Silicon. No account, no server — your Mac talks only to your provider."
+  description="A guided setup for Houdini: install, choose Claude or Codex, connect through the official client, and choose your surfaces. macOS 14+, Apple Silicon."
 >
   <main id="main" tabindex="-1" class="flex-1 pt-28 md:pt-24">
     <!-- Header -->
@@ -66,8 +69,8 @@ security delete-generic-password -s Houdini-claude-session 2>/dev/null || true`;
           A guided setup, start to finish.
         </h1>
         <p data-enter style="--enter-i: 2" class="mt-4 text-lg leading-relaxed text-muted">
-          One command installs Houdini, it reuses a login you already have, and
-          your limits appear in the menu bar. No account, no server — your Mac
+          One command installs Houdini. Choose Claude or Codex, connect through
+          its official client, and see your limits in the menu bar. No Houdini account or server — your Mac
           talks only to your provider. Step through it below, or read it as one
           page.
         </p>
@@ -103,58 +106,60 @@ security delete-generic-password -s Houdini-claude-session 2>/dev/null || true`;
         </div>
       </StepCard>
 
-      <!-- 2 · Connect Claude (decision) -->
+      <!-- 2 · Connect a subscription (decision) -->
       <StepCard
         slug="connect"
         index={1}
         total={total}
         badge="2"
-        title="Connect Claude"
+        title="Connect a subscription"
       >
         <p class="text-sm leading-relaxed text-muted">
-          Houdini never asks you to paste a secret into a form. It reuses a
-          credential you already have, kept in your macOS Keychain — so how you
-          connect depends on one thing:
+          Open Houdini's Settings and choose your subscription. Houdini starts
+          sign-in through its official client in your browser; there is no secret
+          to paste into Houdini. Settings links to client setup if it is missing.
         </p>
         <div
           class="mt-5 flex flex-col gap-3 sm:flex-row"
           role="group"
-          aria-label="Do you already use Claude Code?"
+          aria-label="Which subscription do you want to connect?"
           data-no-arrow-nav
         >
-          <p class="sr-only" id="connect-q">Do you already use Claude Code?</p>
+          <p class="sr-only" id="connect-q">Which subscription do you want to connect?</p>
           <button
             type="button"
             class={choiceClass}
-            data-choice="claude"
-            data-value="yes"
+            data-choice="subscription"
+            data-value="claude"
             data-default
             aria-pressed="true"
             aria-describedby="connect-q"
           >
-            Yes, I use Claude Code
+            Claude
           </button>
           <button
             type="button"
             class={choiceClass}
-            data-choice="claude"
-            data-value="no"
+            data-choice="subscription"
+            data-value="codex"
             aria-pressed="false"
             aria-describedby="connect-q"
           >
-            No, not yet
+            Codex
           </button>
         </div>
-        <div class={panelClass} data-choice-panel="claude" data-value="yes">
-          Houdini reuses Claude Code's OAuth token straight from the Keychain —
-          <strong class="text-text">nothing to configure</strong>. The moment
-          it's installed, it's already reading your usage.
+        <div class={panelClass} data-choice-panel="subscription" data-value="claude">
+          If Claude Code is already signed in with a usable Pro/Max credential,
+          Houdini can read it. Otherwise choose <strong class="text-text">Connect
+          Claude</strong> and finish Claude Code's browser sign-in. This updates
+          your Claude Code session. Existing saved Claude.ai sessions remain a fallback.
         </div>
-        <div class={panelClass} data-choice-panel="claude" data-value="no">
-          Open Houdini's settings and sign in to claude.ai in a secure native
-          window. The session is kept in your
-          <strong class="text-text">Keychain</strong> and reused until it
-          expires — you'll sign in again when it does. No secret to paste.
+        <div class={panelClass} data-choice-panel="subscription" data-value="codex">
+          Install the official <strong class="text-text">Codex CLI 0.150.x</strong>,
+          then choose <strong class="text-text">Connect Codex</strong> and finish
+          sign-in in your browser. The official client keeps a separate Houdini
+          session in your Keychain; your usual Codex login stays unchanged. Houdini
+          displays the Codex quota windows your account returns.
         </div>
       </StepCard>
 
@@ -264,19 +269,18 @@ security delete-generic-password -s Houdini-claude-session 2>/dev/null || true`;
           Your setup
         </p>
         <ul class="mt-3 space-y-2.5 text-sm leading-relaxed text-muted">
-          <li class="flex gap-3" data-recap-when="claude:yes">
+          <li class="flex gap-3" data-recap-when="subscription:claude">
             <span class="mt-0.5 shrink-0 text-spark" aria-hidden="true">✓</span>
             <span>
-              <strong class="text-text">Claude is connected.</strong> Houdini
-              reuses your Claude Code token automatically — nothing to set up.
+              <strong class="text-text">Check Claude in Settings.</strong> A
+              current usage reading confirms the connection after Claude Code sign-in.
             </span>
           </li>
-          <li class="flex gap-3" data-recap-when="claude:no">
+          <li class="flex gap-3" data-recap-when="subscription:codex">
             <span class="mt-0.5 shrink-0 text-spark" aria-hidden="true">✓</span>
             <span>
-              <strong class="text-text">Connect Claude.</strong> Open Houdini's
-              settings and sign in to claude.ai — the session stays in your
-              Keychain until it expires.
+              <strong class="text-text">Check Codex in Settings.</strong> After
+              browser sign-in, Houdini shows the available quota windows and reset timers.
             </span>
           </li>
           <li class="flex gap-3" data-recap-when="widget:yes">
@@ -347,17 +351,17 @@ security delete-generic-password -s Houdini-claude-session 2>/dev/null || true`;
         </summary>
         <div class="mt-4">
           <p class="text-sm leading-relaxed text-muted">
-            Houdini installs to your home folder and — only if you signed in to
-            claude.ai in-app — keeps one session in your Keychain. Quit Houdini
-            (menu bar ▸ Quit), then run:
+            Quit Houdini (menu bar ▸ Quit). If you connected Codex, the first command
+            asks its official client to remove Houdini's separate session; skip it
+            if you never connected Codex. Then remove the app, CLI, and saved preferences:
           </p>
           <div class="mt-3">
             <CopyBlock code={uninstall} label="uninstall Houdini" />
           </div>
           <p class="mt-3 text-sm leading-relaxed text-muted">
-            That's everything Houdini owns — it never touches your Claude Code
-            credential, <code class="font-mono text-text">~/.claude/</code>, or any
-            provider data.
+            You can also remove <code class="font-mono text-text">~/Library/Application Support/Houdini/Codex</code>
+            after logout. These steps preserve Claude Code's credential and your
+            usual <code class="font-mono text-text">~/.codex</code> configuration.
           </p>
         </div>
       </details>
