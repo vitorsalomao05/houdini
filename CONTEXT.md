@@ -12,10 +12,10 @@ Houdini is a **local-first macOS app** (macOS 14+, Apple Silicon) that reveals a
 - **Desktop widget** — the same gauges on the wallpaper as a draggable, resizable glass
   panel (SwiftUI in an `NSPanel`), native to the app. ~60s refresh.
 
-**Claude (Pro/Max) is live today**: 5-hour and weekly limits, reset timers, and any
-extra-usage spend, refreshed about every 60 seconds. The accepted next scope adds
-**Codex** limits and connections initiated from Houdini through official clients.
-This work is in validation, not a published capability; see `BACKLOG.md`.
+The **v1.1.0** release supports **Claude** and **Codex** consumption and reset times,
+with connections initiated from Houdini through their official clients. Claude
+retains its 5-hour, weekly and extra-usage readings; Codex shows its returned quota
+windows. Release verification and acceptance are recorded in `RELEASE.md` and `BACKLOG.md`.
 
 Claude retains its existing usage source and saved-session fallback. Codex data describes
 the quota groups reported by its official client, not a universal quota for every
@@ -36,7 +36,7 @@ renewal dates are outside this work (ADR-004/011/012).
 
 ## Positioning
 
-- **Current site pitch (published release):** *"See your Claude spend at a glance, right from your Mac's menu bar."*
+- **Site pitch:** subscription consumption and reset times for Claude and Codex.
 - **Product direction:** reveal subscription consumption and resets across supported providers.
 - **Audience:** Mac developers and AI power users — especially Claude Pro/Max and Claude
   Code users — who want a fast, practical, always-visible read on consumption.
@@ -50,7 +50,7 @@ renewal dates are outside this work (ADR-004/011/012).
   **pinned Release**, **verifies SHA-256**, and installs **without `sudo`** and **without
   a Gatekeeper prompt** (app → `~/Applications`, CLI → `~/.local/bin`). Safe to re-run;
   offers but never forces launch-at-login.
-- Current release: **v1.0.0**.
+- Current release target: **v1.1.0**; publication evidence lives in `RELEASE.md`.
 
 ## Trust & security posture (a first-class selling point)
 
@@ -67,9 +67,9 @@ renewal dates are outside this work (ADR-004/011/012).
 ## Current state (2026-09-20)
 
 **App**
-- Claude provider is **live** (v1.0.0). It reads the **Claude Code OAuth token in
+- Claude retains its established usage provider. It reads the **Claude Code OAuth token in
   Keychain** *or* a **claude.ai session cookie**.
-- The accepted connection change launches the official Claude Code browser flow and
+- The connection action launches the official Claude Code browser flow and
   then reuses the established credential. Existing OAuth discovery and previously saved
   cookies remain readable. Claude usage access remains a private integration with the
   residual risk recorded in **ADR-012**; launching an official client does not remove it.
@@ -91,8 +91,8 @@ renewal dates are outside this work (ADR-004/011/012).
   terminal-label contrast pass AA, and decorative SVGs are confirmed `aria-hidden` — so the site
   now passes AA on the audited items and shows the product shot on mobile. The hero H1 is
   kept generic (ToS-gated, see **ADR-012**); the short user-facing transparency line is now
-  **mandatory for v1** (ADR-012 §6, revised 2026-07-03) and queued for implementation
-  (app Settings + site privacy page).
+  **mandatory** (ADR-012 §6, revised 2026-07-03) and present in app Settings and
+  the site's privacy page.
 
 ## Design direction
 

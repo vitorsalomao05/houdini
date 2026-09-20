@@ -50,7 +50,7 @@ jobs:
 
   # Job 2 — the menu bar app builds and its smoke flags pass (DX-07).
   app:
-    name: app — build + smoke (--metrictest, --widgettest)
+    name: app — build + smoke (--metrictest, --authtest, --widgettest)
     runs-on: macos-26
     steps:
       - name: Checkout
@@ -75,7 +75,7 @@ jobs:
         working-directory: apps/menubar
         run: ./build.sh release
 
-      - name: Smoke — built binary (--metrictest, --widgettest)
+      - name: Smoke — built binary (--metrictest, --authtest, --widgettest)
         run: |
           set -euo pipefail
           BIN="apps/menubar/build/Houdini.app/Contents/MacOS/Houdini"

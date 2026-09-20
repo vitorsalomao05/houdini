@@ -73,14 +73,16 @@ jobs:
         working-directory: core
         run: swift run houdini-selftest
 
-      - name: Verify — built-binary smoke (--metrictest, --widgettest)
+      - name: Verify — built-binary smoke (--metrictest, --authtest, --widgettest)
         run: |
           set -euo pipefail
           BIN="apps/menubar/build/Houdini.app/Contents/MacOS/Houdini"
           # --metrictest: known-answer assertions on the menu-bar strings
           # (deterministic PreviewData; exits non-zero on any mismatch).
           "$BIN" --metrictest
-          # --widgettest: 13 real checks with a genuine pass/fail exit code.
+          # Official-client login and subscription switching use fake credentials.
+          "$BIN" --authtest
+          # --widgettest: real checks with a genuine pass/fail exit code.
           # It exits 0 with a "no display available" note on a headless
           # machine — treat that skip as a failure so verification can't be
           # silently green (MB-08).
@@ -134,6 +136,10 @@ jobs:
           - \`houdini\` — the data-layer CLI (\`houdini --json\`).
           - \`SHASUMS256.txt\` — SHA-256 of every asset above.
           EOF
+          if [ -f "docs/releases/$TAG.md" ]; then
+            printf '\n' >> "$NOTES"
+            cat "docs/releases/$TAG.md" >> "$NOTES"
+          fi
           if [ "$EVENT" = "push" ] && [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             gh release create "$TAG" \
               --title "Houdini $TAG" \

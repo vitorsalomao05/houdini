@@ -10,10 +10,32 @@ or absent.
 
 **Publishing is CI's job.** `.github/workflows/release.yml` is the sole
 publisher: it builds, verifies (core `swift test`, `houdini-selftest`,
-built-binary `--metrictest`/`--widgettest`), checksums, and publishes on a
+built-binary `--metrictest`/`--authtest`/`--widgettest`), checksums, and publishes on a
 `vX.Y.Z` tag push. The manual role is to bump, tag, watch, and verify.
 
 Replace `X.Y.Z` with the new version (and `P.Q.R` with the previous one).
+
+---
+
+## ▶ v1.1.0 — production delivery in progress, 2026-09-20
+
+Minor version: Claude official-client browser connections, Codex quota windows,
+subscription selection across app surfaces, and restored desktop-widget resize
+limits. Marketing version **1.1.0**, build **7**. The owner explicitly approved
+Claude and production delivery; the unobserved live Claude account/usage round trip
+is recorded in the [validation evidence](docs/validation/subscription-connections-2026-09-20.md).
+Paused WIPs #3/#4 remain preserved and outside this release.
+
+- [x] Implementation and owner acceptance recorded; real Codex login, reads and
+      restart recovery observed; keyboard/focus and display-based widget checks passed.
+- [ ] Complete release branch CI and independent final review.
+- [ ] Publish `v1.1.0` through the sole CI publisher; record run and asset checksums.
+- [ ] Deploy and verify the production site and its current-version pointers.
+- [ ] Replace the installed app/CLI with checksum-verified published artifacts;
+      preserve rollback copies and verify the installed version and Codex connection.
+- [ ] Retitle the previous release as superseded and record final WIP preservation.
+
+Release notes: [`docs/releases/v1.1.0.md`](docs/releases/v1.1.0.md).
 
 ---
 

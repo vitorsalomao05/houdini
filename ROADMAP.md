@@ -29,10 +29,13 @@ Docs (README, ARCHITECTURE, DECISIONS, PROVIDERS, WORKFLOW — the last since me
 - Menu bar app writes to App Group + `reloadTimelines()` *(moved here from Phase 2 — this
   bridge only exists to feed a WidgetKit surface, so it lands with this phase, not before)*.
 
-## Phase 5 — More providers `[~]`
-- ✅ Claude `.sessionCookie` fallback (embedded WebView login) — shipped (in v0.4.0).
-- OpenAI Platform + Anthropic Console admin-API adapters.
-- ChatGPT Plus experimental.
+## Phase 5 — Subscription connections — v1.1.0
+- Claude uses its installed official client's browser login. Existing saved Claude.ai
+  sessions remain readable; new macOS connections no longer capture WebView cookies.
+- Codex uses the official client's account/limits protocol with separate Houdini
+  authentication. The app shows reported quota windows and resets.
+- OpenAI Platform + Anthropic Console admin-API adapters remain deferred; universal
+  ChatGPT feature limits are outside this scope.
 
 ## Phase 6 — Distribution ✅ (decided + shipped)
 - Decision finalized per ADR-006 (revised): the ad-hoc-signed `install.sh` / curl|bash path

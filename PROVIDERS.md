@@ -2,7 +2,7 @@
 
 Every usage source implements one protocol. Usage rendering reads capability flags and
 the metrics returned; connection flows follow the provider's ownership model.
-The accepted subscription changes below are in validation, not a published release.
+The subscription changes below are the owner-approved v1.1.0 release scope.
 See [scope and acceptance criteria](docs/plans/subscription-connections.md).
 
 ## Contract
@@ -68,7 +68,7 @@ zero consumption. Metrics and in-flight results belong to the selected subscript
 - **Quota mapping:** prefer `rateLimitsByLimitId` when populated, otherwise `rateLimits`. Preserve bucket names/IDs and primary/secondary windows without duplicating the fallback. `usedPercent` is required for each returned window; `windowDurationMins` and Unix-seconds `resetsAt` may be absent. Missing duration is not assumed to be five hours or a week.
 - **Local scope:** use `~/Library/Application Support/Houdini/Codex` (0700) as the canonical `CODEX_HOME` and child working directory. Use an environment allowlist rather than inheriting the developer's Codex/OpenAI variables. Check the home returned by `initialize`. Leave the normal `~/.codex` configuration and login untouched.
 - **Persistence:** require `cli_auth_credentials_store="keyring"`; never `auto` or file fallback. In official [`rust-v0.150.1` storage code](https://github.com/openai/codex/blob/rust-v0.150.1/codex-rs/login/src/auth/storage.rs), the service is `Codex Auth` and the account is `cli|` plus the first 16 hexadecimal characters of SHA-256 of canonical `CODEX_HOME`; load/save/delete share that namespace. This establishes the source-level separation, not an observed login/logout or real Keychain round trip.
-- **Compatibility evidence:** schema and storage inspected at `codex-cli 0.150.1`; the local implementation accepts `0.150.x`. Revalidate protocol and storage before widening that range. The isolated unauthenticated spike and fake-client tests do not establish live account quotas or persistence behavior; validation results belong in the delivery record.
+- **Compatibility evidence:** schema and storage inspected at `codex-cli 0.150.1`; the implementation accepts `0.150.x`. Revalidate protocol and storage before widening that range. Real browser login, quota reads and session recovery after app restart were observed; see the [validation record](docs/validation/subscription-connections-2026-09-20.md).
 
 ## anthropic-console (API usage/cost) — deferred, outside current priority
 - **Capabilities:** `dollarBalance` (cost), usage tokens. NOT remaining prepaid balance via API.
@@ -92,7 +92,7 @@ API adapters and the former experimental ChatGPT cookie approach are outside thi
 
 ---
 
-## Subscription selection (app Settings) — current slice, in validation
+## Subscription selection (app Settings) — v1.1.0
 
 The user picks and configures providers **inside the native app's Settings** — never
 on the website (ADR-011). The site presents capability as one honest line and ships

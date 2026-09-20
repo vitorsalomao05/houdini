@@ -8,7 +8,7 @@
 
 ---
 
-## P1 · Subscription connections and quotas `[~]` — accepted 2026-09-20, in validation
+## P1 · Subscription connections and quotas `[x]` — accepted for v1.1.0, 2026-09-20
 
 Implement and validate the accepted [subscription scope](docs/plans/subscription-connections.md):
 Claude and Codex consumption, limits, and resets, with connection initiated from
@@ -19,10 +19,11 @@ and API spending are outside this work. Release Contract **#3** and Installation
 Implementation and synthetic verification are complete in the isolated checkout.
 Real Codex login/quota reads, native keyboard/focus checks, and the display-dependent
 widget smoke test passed. QA exposed and corrected the widget's resize-limit setup.
-The owner requested the visible name **Codex** and explicitly deferred real Claude
-account validation after the provider required Pro/Max for the current browser
-session. See the [validation record](docs/validation/subscription-connections-2026-09-20.md).
-No release or replacement of the installed app has been performed.
+The owner requested the visible name **Codex**, then explicitly approved Claude and
+closing the implementation, publishing a new production version and replacing the
+installed app. Claude's successful real account/usage round trip remains unobserved;
+approval is acceptance of that validation boundary. See the [validation record](docs/validation/subscription-connections-2026-09-20.md).
+Publication and local replacement are tracked in `RELEASE.md`.
 
 The entries below retain the prior work record; they are not the current execution queue.
 

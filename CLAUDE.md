@@ -7,12 +7,11 @@
 ## What Houdini is (one line)
 
 A local-first **macOS app** for subscription consumption, limits, and quota resets — in
-the menu bar and on the desktop. **Claude (Pro/Max) is live today**; Claude official-client
-connections and **Codex** limits are the accepted work in validation. No Houdini
+the menu bar and on the desktop. The **v1.1.0** release includes Claude official-client
+connections and **Codex** limits. No Houdini
 account or server; see ADR-004/011/012 for provider scope and credential boundaries.
 
-Pitch we lead with on the site: *"See your Claude spend at a glance, right from your
-Mac's menu bar."*
+The site leads with subscription consumption and resets for Claude and Codex.
 
 ## This is a monorepo
 
@@ -30,7 +29,7 @@ audit/           v1 audit corpus (charter, diagnosis, plan — 2026-07-03)
 **Environment:** macOS 14+ / Apple Silicon. App = Swift / SwiftUI (menu bar + desktop
 widget ship as one SwiftPM executable; no `.xcodeproj`, no full Xcode required — build via
 `apps/menubar/build.sh`). Site = Astro 5 + Tailwind 4. Installer is pinned to a release tag
-(currently `v1.0.0`). New here? Run `scripts/init.sh` to verify your toolchain and print the
+(currently `v1.1.0`). New here? Run `scripts/init.sh` to verify your toolchain and print the
 repo map + real commands + the top BACKLOG item.
 
 ## Source-of-truth docs (read before changing related areas)

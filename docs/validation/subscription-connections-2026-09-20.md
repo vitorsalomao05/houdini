@@ -1,9 +1,18 @@
 # Subscription connections — validation, 2026-09-20
 
 Base: `master@7a6d6f7119efa7c375cf7746cdff747cd507c626`. Work lives on a separate
-`feat/subscription-connections` checkout. No release, replacement of the installed
-app, remote push, provider logout, or signing command was performed. The owner
+`feat/subscription-connections` checkout. At the end of this QA phase, no release,
+replacement of the installed app, remote push, provider logout, or signing command
+had been performed. Subsequent production delivery is recorded in `RELEASE.md`. The owner
 approved opening a separate real validation bundle and completed Codex sign-in.
+
+## Release acceptance
+
+The owner subsequently approved Claude, closing the implementation, replacing the
+installed Houdini and publishing a new production version. This accepts the observed
+validation boundary; it is not evidence of a successful live Claude quota round trip.
+The external-browser handoff and automated login/credential tests remain the Claude
+evidence. Version 1.1.0 carries this acceptance forward without resuming WIPs #3/#4.
 
 ## Observed results
 
