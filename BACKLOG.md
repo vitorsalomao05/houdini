@@ -11,16 +11,18 @@
 ## P1 · Subscription connections and quotas `[~]` — accepted 2026-09-20, in validation
 
 Implement and validate the accepted [subscription scope](docs/plans/subscription-connections.md):
-Claude and ChatGPT · Codex consumption, limits, and resets, with connection initiated from
+Claude and Codex consumption, limits, and resets, with connection initiated from
 Houdini through official clients. ADR-004/011/012 record the revised direction. Billing
 and API spending are outside this work. Release Contract **#3** and Installation Lifecycle
 **#4** remain paused and preserved; no lifecycle work is reprioritized here.
 
-Implementation and synthetic verification are complete in the isolated checkout;
-the owner-approved native preview was inspected. The [validation record](docs/validation/subscription-connections-2026-09-20.md)
-tracks the remaining observations: live provider login/quota access, keyboard focus
-with macOS keyboard navigation enabled, and the display-dependent widget smoke test.
-No release or installation has been performed.
+Implementation and synthetic verification are complete in the isolated checkout.
+Real Codex login/quota reads, native keyboard/focus checks, and the display-dependent
+widget smoke test passed. QA exposed and corrected the widget's resize-limit setup.
+The owner requested the visible name **Codex** and explicitly deferred real Claude
+account validation after the provider required Pro/Max for the current browser
+session. See the [validation record](docs/validation/subscription-connections-2026-09-20.md).
+No release or replacement of the installed app has been performed.
 
 The entries below retain the prior work record; they are not the current execution queue.
 
