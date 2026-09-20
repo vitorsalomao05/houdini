@@ -50,9 +50,8 @@ const ogImageUrl = Astro.site
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
 
-    <!-- Mark JS on before paint, so JS-only states (entrance, tab/accordion
-         enhancement) only apply when JS is available. The <html> element persists
-         across view transitions, so this runs once and stays set. -->
+    <!-- Mark JS on before paint. The bundled after-swap listener restores this
+         class when the router replaces the document's root attributes. -->
     <script is:inline>
       document.documentElement.classList.add("js");
     </script>
@@ -223,6 +222,9 @@ const ogImageUrl = Astro.site
       }
 
       document.addEventListener("astro:page-load", onReady);
+      document.addEventListener("astro:after-swap", () => {
+        document.documentElement.classList.add("js");
+      });
       // Registered once for the whole session (not per navigation): no leak.
       window.addEventListener("resize", repositionTabIndicators);
     </script>
