@@ -32,6 +32,14 @@ jobs:
           sudo xcode-select -s "$XC"
           swift --version
 
+      - name: Diagnose Codex fixture startup
+        working-directory: core
+        run: |
+          set -euo pipefail
+          /usr/bin/time -p env -i PATH=/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin CODEX_HOME="$RUNNER_TEMP/codex-probe" LANG=en_US.UTF-8 /usr/bin/python3 -c 'import sys,json,os,time; print(sys.executable)'
+          swift test --filter CodexAppServerTransportTests.oldClientNeverStartsServer
+          swift test --filter CodexAppServerTransportTests
+
       - name: swift test (must actually execute tests)
         working-directory: core
         run: |
