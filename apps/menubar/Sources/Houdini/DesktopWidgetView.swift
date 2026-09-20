@@ -17,7 +17,7 @@ struct DesktopWidgetView: View {
     @ObservedObject var model: UsageModel
     /// Present in the live app (drives the "Connect Claude" CTA); nil in headless
     /// snapshots without an auth session.
-    var session: ClaudeSession?
+    var session: SubscriptionSession?
     /// Force the opaque Reduce-Transparency card (snapshots only — the live flag is
     /// read from the environment).
     var forceReduceTransparency: Bool = false
@@ -99,6 +99,9 @@ struct DesktopWidgetView: View {
     private var header: some View {
         HStack(spacing: Theme.Spacing.header) {
             BrandWordmark(size: 13)
+            Text(session?.displayName ?? "Claude")
+                .scaledFont(9, relativeTo: .caption2).glassSecondaryText()
+                .lineLimit(1)
             Spacer()
             StatusDot(state: model.state)
         }

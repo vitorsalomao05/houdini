@@ -31,6 +31,9 @@ public struct UsageMetric: Sendable, Codable, Equatable {
     public var limit: Double?
     public var resetAt: Date?
     public var dollars: Double?
+    /// The provider's quota-window duration, when supplied. A reset timestamp
+    /// alone does not establish the window's length.
+    public var windowDurationMinutes: Int?
     public let providerId: String
 
     public init(
@@ -40,7 +43,8 @@ public struct UsageMetric: Sendable, Codable, Equatable {
         limit: Double? = nil,
         resetAt: Date? = nil,
         dollars: Double? = nil,
-        providerId: String
+        providerId: String,
+        windowDurationMinutes: Int? = nil
     ) {
         self.label = label
         self.pct = pct
@@ -49,6 +53,7 @@ public struct UsageMetric: Sendable, Codable, Equatable {
         self.resetAt = resetAt
         self.dollars = dollars
         self.providerId = providerId
+        self.windowDurationMinutes = windowDurationMinutes
     }
 }
 

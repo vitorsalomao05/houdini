@@ -15,7 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// Launch-at-login state via SMAppService.
     let launch = LaunchAtLogin()
     /// Claude auth state (Claude Code token → claude.ai cookie → signed out).
-    lazy var session = ClaudeSession(settings: settings)
+    lazy var session = SubscriptionSession(settings: settings)
     /// The model reads its interval from `settings` and reads its provider from `session`
     /// on every fetch, so auth changes apply without a restart. While signed-out / in an
     /// error state it also asks `session` to re-read the Keychain (`reresolveAuth`), so a
@@ -35,7 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         launch.refresh()
         // Re-fetch immediately whenever the active Claude credential changes.
-        session.onAuthChange = { [weak self] in self?.model.reloadAuth() }
+        session.onAuthChange = { [weak self] in self?.model.reloadAuth(clearMetrics: true) }
         model.start()
         // Instantiate the widget controller: its `showDesktopWidget` subscription
         // fires with the current value, showing the panel if the user enabled it.
@@ -60,7 +60,8 @@ struct HoudiniMenuBarApp: App {
         Settings {
             SettingsView(settings: appDelegate.settings,
                          launch: appDelegate.launch,
-                         session: appDelegate.session)
+                         session: appDelegate.session,
+                         model: appDelegate.model)
                 .tint(.brand)
         }
     }

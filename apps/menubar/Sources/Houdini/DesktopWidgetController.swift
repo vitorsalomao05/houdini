@@ -15,7 +15,7 @@ import Combine
 @MainActor
 final class DesktopWidgetController: NSObject, NSWindowDelegate {
     private let model: UsageModel
-    private let session: ClaudeSession
+    private let session: SubscriptionSession
     private let settings: AppSettings
     /// Where the frame + displayID are persisted. Injectable so `--widgettest` can
     /// exercise save/restore against an isolated suite.
@@ -36,7 +36,7 @@ final class DesktopWidgetController: NSObject, NSWindowDelegate {
         static let displayID = "houdini.widget.displayID"
     }
 
-    init(model: UsageModel, session: ClaudeSession, settings: AppSettings,
+    init(model: UsageModel, session: SubscriptionSession, settings: AppSettings,
          defaults: UserDefaults = .standard) {
         self.model = model
         self.session = session

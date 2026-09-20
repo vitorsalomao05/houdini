@@ -8,7 +8,17 @@
 
 ---
 
-## P1 · App — Login / credential refactor  `[x]` *(capped at slice (a) by ADR-012 — shipped)*
+## P1 · Subscription connections and quotas `[~]` — accepted 2026-09-20, in validation
+
+Implement and validate the accepted [subscription scope](docs/plans/subscription-connections.md):
+Claude and ChatGPT · Codex consumption, limits, and resets, with connection initiated from
+Houdini through official clients. ADR-004/011/012 record the revised direction. Billing
+and API spending are outside this work. Release Contract **#3** and Installation Lifecycle
+**#4** remain paused and preserved; no lifecycle work is reprioritized here.
+
+The entries below retain the prior work record; they are not the current execution queue.
+
+## Historical P1 · App — Login / credential refactor  `[x]` *(July scope capped at slice (a) — shipped)*
 
 > **⚠ ToS note — decided 2026-07-01 (see ADR-012).** Houdini's Claude auth (Claude Code OAuth token + claude.ai cookie) is prohibited third-party use under Anthropic's Consumer Terms; enforcement is active (account bans land on the *user's* own account). **Decision:** keep it **read-only** using the user's existing credential; **freeze** expansion (no refresh / PKCE / cookie-hardening); do not seek permission; do not pivot now (options i/iv are the future fallback). This **caps P1 at slice (a)** — a user with no Claude Code credential at all is out of scope by decision. The short user-facing transparency line is **mandatory for v1** (ADR-012 §6, revised 2026-07-03); implementation queued (v1 audit unit B4).
 
@@ -215,7 +225,7 @@ version, and reports the new version to the user.
       README); `apps/widget/` documented as a README-only placeholder, not a built target
       *(the placeholder dir was later deleted, 2026-07-03, per ADR-013 — v1 audit Phase D)*.
 
-## Immediate next steps
+## Historical next steps (post-v1 record; current priority above)
 
 *Framing + scope sign-off are long done. The login decision (**ADR-012**, P1 capped and shipped),
 the site audit + its ToS-independent quick-wins (commit `78e2bf3`), P2 slices 1–2 (commits

@@ -45,6 +45,7 @@ final class AppSettings: ObservableObject {
         static let refreshInterval = "houdini.refreshIntervalSeconds"
         static let preferCookieAuth = "houdini.preferCookieAuth"
         static let showDesktopWidget = "houdini.showDesktopWidget"
+        static let subscription = "houdini.subscription"
     }
 
     /// Refresh cadences offered in Settings. 60s is the ADR-002 default.
@@ -52,6 +53,15 @@ final class AppSettings: ObservableObject {
     static let defaultInterval: TimeInterval = 60
 
     private let defaults: UserDefaults
+
+    @Published var subscription: TrackedSubscription {
+        didSet {
+            defaults.set(subscription.rawValue, forKey: Keys.subscription)
+            if !subscription.metricChoices.contains(primaryMetric) {
+                primaryMetric = .auto
+            }
+        }
+    }
 
     @Published var primaryMetric: PrimaryMetricChoice {
         didSet { defaults.set(primaryMetric.rawValue, forKey: Keys.primaryMetric) }
@@ -77,6 +87,8 @@ final class AppSettings: ObservableObject {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        subscription = defaults.string(forKey: Keys.subscription)
+            .flatMap(TrackedSubscription.init(rawValue:)) ?? .claude
 
         // New installs default to the 5-hour session window (the figure users
         // glance at most). A previously saved choice is loaded verbatim, so only
@@ -91,5 +103,8 @@ final class AppSettings: ObservableObject {
 
         preferCookieAuth = defaults.bool(forKey: Keys.preferCookieAuth)
         showDesktopWidget = defaults.bool(forKey: Keys.showDesktopWidget)
+        if !subscription.metricChoices.contains(primaryMetric) {
+            primaryMetric = .auto
+        }
     }
 }

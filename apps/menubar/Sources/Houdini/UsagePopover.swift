@@ -19,7 +19,7 @@ struct UsagePopover: View {
     @ObservedObject var model: UsageModel
     /// Optional so headless renders (`--snapshot`) can build the popover without an
     /// auth session; the sign-in CTA only appears when a session is present.
-    var session: ClaudeSession?
+    var session: SubscriptionSession?
     /// Force the opaque Reduce-Transparency card (snapshots only — the live flag is
     /// read from the environment by `GlassCardBackground`), mirroring the widget.
     var forceReduceTransparency: Bool = false
@@ -56,7 +56,7 @@ struct UsagePopover: View {
         // and traverses the figures in reading order; children stay individually
         // navigable (nothing hidden).
         .accessibilityElement(children: .contain)
-        .accessibilityLabel("Claude usage")
+        .accessibilityLabel("\(session?.displayName ?? "Claude") usage")
         .onAppear {
             // Opening the popover while signed-out or in an error state re-checks for a
             // Claude credential right away (e.g. the user logged into Claude Code after
@@ -75,6 +75,8 @@ struct UsagePopover: View {
     private var header: some View {
         HStack(spacing: Theme.Spacing.header) {
             BrandWordmark(size: 15)
+            Text(session?.displayName ?? "Claude")
+                .scaledFont(10, relativeTo: .caption).glassSecondaryText()
             Spacer()
             StatusDot(state: model.state)
         }

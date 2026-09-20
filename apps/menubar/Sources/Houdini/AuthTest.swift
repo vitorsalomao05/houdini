@@ -18,6 +18,33 @@ private func err(_ s: String) { FileHandle.standardError.write(Data((s + "\n").u
 /// signed in so the flip is observed on `session.activeAuth`/`currentProvider` WITHOUT a
 /// real fetch to api.anthropic.com. Exits non-zero on any failed assertion.
 enum AuthTest {
+    /// Deliberately ignores cancellation, so the test can deliver an old
+    /// subscription's response after the user has already switched providers.
+    final class DeferredProvider: UsageProvider, @unchecked Sendable {
+        let id = "deferred"
+        let displayName = "Deferred"
+        let authMethod: AuthMethod = .keychainOAuth
+        let capabilities: Capabilities = [.usagePct]
+        let refreshInterval: TimeInterval = 60
+        private let lock = NSLock()
+        private var pending: CheckedContinuation<[UsageMetric], Error>?
+        var waiting: Bool { lock.withLock { pending != nil } }
+        func fetch() async throws -> [UsageMetric] {
+            try await withCheckedThrowingContinuation { continuation in
+                lock.withLock { pending = continuation }
+            }
+        }
+        func finish(_ metrics: [UsageMetric]) {
+            let continuation = lock.withLock { let value = pending; pending = nil; return value }
+            continuation?.resume(returning: metrics)
+        }
+    }
+
+    @MainActor
+    private static func until(_ condition: () -> Bool) {
+        let deadline = Date().addingTimeInterval(3)
+        while !condition() && Date() < deadline { pump(0.02) }
+    }
     /// In-memory stand-in for the Claude Code OAuth Keychain item(s). Thread-safe because
     /// the injected read closure is `@Sendable`; in practice it is only ever called on the
     /// main actor. Records read invocations (to prove re-resolution runs) and write
@@ -152,6 +179,71 @@ enum AuthTest {
             err("    reads across healthy ticks: Δ=\(healthyDelta) (expected 0)")
             check("no keychainRead on healthy ticks", healthyDelta == 0)
             check("no Keychain writes during phase 3", store3.writes == 0)
+
+            err("--- official-client connection and subscription switching ---")
+            let loginStore = FakeKeychain()
+            let loginSettings = settings("official-login")
+            loginSettings.preferCookieAuth = true
+            var loginCalls = 0
+            let loginSession = ClaudeSession(settings: loginSettings, resolver: resolver(loginStore), login: {
+                loginCalls += 1
+                try await Task.sleep(for: .milliseconds(30))
+                loginStore.put("Claude Code-credentials", fakeOAuthBlob())
+            })
+            loginSession.signIn()
+            loginSession.signIn()
+            until { !loginSession.isSigningIn }
+            check("duplicate connection clicks start one official login", loginCalls == 1)
+            check("official login completion re-discovers the credential", loginSession.activeAuth == .oauth)
+            check("explicit Claude Code login clears the legacy priority override", !loginSettings.preferCookieAuth)
+            check("successful connection does not write a cookie", loginStore.writes == 0)
+
+            let failedSession = ClaudeSession(settings: settings("failed-login"), resolver: resolver(FakeKeychain()), login: {
+                throw NSError(domain: "SECRET-CANARY", code: 1, userInfo: [NSLocalizedDescriptionKey: "SECRET-CANARY"])
+            })
+            failedSession.signIn()
+            until { !failedSession.isSigningIn }
+            check("failed login stays disconnected", failedSession.currentProvider == nil)
+            check("login errors do not expose raw process details", failedSession.lastError != nil && !(failedSession.lastError?.contains("SECRET-CANARY") ?? true))
+
+            let cancelledSession = ClaudeSession(settings: settings("cancel-login"), resolver: resolver(FakeKeychain()), login: {
+                try await Task.sleep(for: .seconds(60))
+            })
+            cancelledSession.signIn()
+            pump(0.05)
+            cancelledSession.cancelSignIn()
+            until { !cancelledSession.isSigningIn }
+            check("cancelled login finishes without changing credentials", !cancelledSession.isSigningIn && cancelledSession.currentProvider == nil && cancelledSession.lastError == nil)
+
+            let switchSettings = settings("switch")
+            let switchSession = SubscriptionSession(settings: switchSettings,
+                claude: ClaudeSession(settings: switchSettings, resolver: resolver(FakeKeychain())))
+            let delayed = DeferredProvider()
+            let codexMetrics = [UsageMetric(label: "codex · 5-hour", pct: 17, providerId: "chatgpt-codex", windowDurationMinutes: 300)]
+            let switchModel = UsageModel(resolveProvider: {
+                if switchSession.selected == .claude { return delayed }
+                return StubProvider(metrics: codexMetrics)
+            })
+            switchSession.onAuthChange = { switchModel.reloadAuth(clearMetrics: true) }
+            switchModel.refreshNow()
+            until { delayed.waiting }
+            check("old provider request is in flight", delayed.waiting)
+            switchSettings.primaryMetric = .extraUsage
+            switchSettings.subscription = .chatgptCodex
+            check("switch removes an unsupported metric selection", switchSettings.primaryMetric == .auto)
+            check("switch clears metrics and timestamp immediately", switchModel.metrics.isEmpty && switchModel.lastUpdated == nil)
+            until { switchModel.metrics == codexMetrics }
+            delayed.finish(PreviewData.sampleMetrics())
+            pump(0.1)
+            check("late old-provider response cannot replace the selected subscription", switchModel.metrics == codexMetrics)
+
+            let windows = codexMetrics + [UsageMetric(label: "codex · 7-day", pct: 91, providerId: "chatgpt-codex", windowDurationMinutes: 10_080)]
+            check("5-hour selection uses the actual Codex window duration", windows.primary(for: .fiveHour)?.pct == 17)
+            check("weekly selection uses the actual Codex window duration", windows.primary(for: .weekly)?.pct == 91)
+            let emptyModel = UsageModel(provider: StubProvider(metrics: []))
+            emptyModel.refreshNow()
+            until { emptyModel.state != .loading }
+            check("missing quota windows are unavailable, never a successful zero", emptyModel.metrics.isEmpty && emptyModel.state.isError)
 
             err("=== authtest: \(pass) passed, \(fail) failed ===")
             exit(fail == 0 ? 0 : 1)

@@ -6,6 +6,12 @@ import Foundation
 enum Main {
     static func main() {
         let args = CommandLine.arguments
+        #if DEBUG
+        if args.contains("--connection-preview") || Bundle.main.object(forInfoDictionaryKey: "HoudiniConnectionPreview") as? Bool == true {
+            MainActor.assumeIsolated { ConnectionPreview.run() }
+            return
+        }
+        #endif
         if let i = args.firstIndex(of: "--snapshot"), args.count > i + 1 {
             Snapshotter.run(outputDir: args[i + 1])
             return

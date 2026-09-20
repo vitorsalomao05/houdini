@@ -1,29 +1,41 @@
 # CONTEXT.md — Houdini (product & current state)
 
 > The *why* and *what* behind Houdini. Pairs with [`CLAUDE.md`](CLAUDE.md) (how we work)
-> and [`BACKLOG.md`](BACKLOG.md) (what's next). Framed 2026-07-01 · trued 2026-07-03 (v1 audit).
+> and [`BACKLOG.md`](BACKLOG.md) (what's next). Framed 2026-07-01 · direction revised 2026-09-20.
 
 ## Product overview
 
 Houdini is a **local-first macOS app** (macOS 14+, Apple Silicon) that reveals a user's
-**AI usage and spend**. It surfaces the same data two co-equal ways:
+**subscription consumption, quota limits, and reset times**. It surfaces the same data two co-equal ways:
 
 - **Menu bar** — your tightest limit, always visible; popover with full detail. ~60s refresh.
 - **Desktop widget** — the same gauges on the wallpaper as a draggable, resizable glass
   panel (SwiftUI in an `NSPanel`), native to the app. ~60s refresh.
 
 **Claude (Pro/Max) is live today**: 5-hour and weekly limits, reset timers, and any
-extra-usage spend, refreshed about every 60 seconds. **OpenAI and the Anthropic
-Console are on the roadmap** (see `PROVIDERS.md` / `ROADMAP.md`).
+extra-usage spend, refreshed about every 60 seconds. The accepted next scope adds
+**ChatGPT · Codex** limits and connections initiated from Houdini through official clients.
+This work is in validation, not a published capability; see `BACKLOG.md`.
 
-The core mechanism: Houdini reads the user's *existing* credential (Keychain OAuth token
-or session cookie) and calls each provider's **JSON usage endpoint directly** — no bundled
-browser, no scraping (a browser-scrape adapter survives only as a last-resort fallback).
+Claude retains its existing usage source and saved-session fallback. ChatGPT data comes
+from Codex's account limits and describes the returned Codex groups, not a universal
+quota for every ChatGPT feature. API spending, subscription billing, invoices, and
+renewal dates are outside this work (ADR-004/011/012).
+
+### Subscription vocabulary
+
+- **Subscription:** the selected Claude or ChatGPT account whose supported consumption
+  Houdini displays; a provider API account is a separate product.
+- **Quota window:** a provider-reported allowance over a period, with a reported percentage
+  and optional reset time. An unavailable value is unknown, never zero by inference.
+- **Reset:** when a quota window renews; it is not the subscription's billing renewal.
+- **Connection:** the account can be used to read its supported usage. Completing browser
+  sign-in alone does not establish that usage data is available.
 
 ## Positioning
 
-- **Lead pitch:** *"See your Claude spend at a glance, right from your Mac's menu bar."*
-- **Broader promise:** reveal your AI usage and spend, local-first, across providers.
+- **Current site pitch (published release):** *"See your Claude spend at a glance, right from your Mac's menu bar."*
+- **Product direction:** reveal subscription consumption and resets across supported providers.
 - **Audience:** Mac developers and AI power users — especially Claude Pro/Max and Claude
   Code users — who want a fast, practical, always-visible read on consumption.
 - **Name:** "Houdini" = the number *revealed*, not hidden.
@@ -40,7 +52,9 @@ browser, no scraping (a browser-scrape adapter survives only as a last-resort fa
 
 ## Trust & security posture (a first-class selling point)
 
-- Credentials **never leave the device** — tokens/cookies stay in the macOS **Keychain**.
+- Houdini persists credentials in the macOS **Keychain**; authentication is sent only to
+  the relevant provider, never to a Houdini server or logs. Existing Claude credential
+  discovery and delegated Codex storage are bounded by ADR-005/012.
 - **There is no Houdini server.** Requests go straight from the user's Mac to each
   provider's own endpoint.
 - Because the app touches logins, the site carries a **dedicated trust/privacy section**.
@@ -48,17 +62,19 @@ browser, no scraping (a browser-scrape adapter survives only as a last-resort fa
 - Principle for the future: any elevated permission (e.g. the browser-scrape fallback)
   must be provably secure and least-privilege before it ships.
 
-## Current state (2026-07-03)
+## Current state (2026-09-20)
 
 **App**
 - Claude provider is **live** (v1.0.0). It reads the **Claude Code OAuth token in
   Keychain** *or* a **claude.ai session cookie**.
-- **Claude auth is deliberately KEPT READ-ONLY and its subscription-auth expansion is FROZEN**
-  (see **ADR-012**, decided 2026-07-01). Both paths use the user's *existing* on-device
-  credential; Anthropic's Consumer Terms restrict third-party use of subscription OAuth/cookies,
-  so Houdini stays read-only and adds **no** refresh, first-run PKCE, or cookie-hardening. P1
-  shipped only slice (a) (broadened discovery of an existing credential); a user with **no**
-  Claude Code credential anywhere is **out of scope by decision**.
+- The accepted connection change launches the official Claude Code browser flow and
+  then reuses the established credential. Existing OAuth discovery and previously saved
+  cookies remain readable. Claude usage access remains a private integration with the
+  residual risk recorded in **ADR-012**; launching an official client does not remove it.
+- ChatGPT connections and quota reads use the official Codex App Server with a separate
+  Houdini authentication scope. Both new connection flows require their official client;
+  missing clients lead to installation guidance. See `PROVIDERS.md` for the contract and
+  [`subscription scope`](docs/plans/subscription-connections.md) for acceptance criteria.
 - Menu bar + native desktop widget ship inside one app. A Notification Center WidgetKit
   widget was never built and is **deferred** (hard-blocked under the current
   distribution — ADR-013); it was intentionally never advertised (ADR-002).
@@ -84,14 +100,10 @@ real product screenshot/demo, and a distinct trust/privacy section. Accessible b
 
 ## Priorities (app-first) & why
 
-1. **Login refactor — DECIDED / CAPPED (ADR-012).** The Claude integration stays **read-only**
-   on the user's existing credential and its subscription-auth expansion is **frozen**; slice (a)
-   (broadened discovery) shipped, and a user with no Claude Code credential anywhere is out of
-   scope by decision. Active focus has moved to #2.
-2. **Widget accessibility + polish** — make the core surfaces (menu bar + desktop widget)
-   genuinely polished and accessible end to end.
-3. **Site polish + ongoing features** — with the app solid, drive the site to zero clutter
-   and keep it evolving with new features and ideas.
+Current work and validation status live in `BACKLOG.md`. The accepted priority is
+subscription consumption and reliable connection initiation for Claude and ChatGPT · Codex,
+using the menu bar, popover, and desktop widget. The paused Release Contract (#3) and
+Installation Lifecycle (#4) WIPs remain separate; this scope does not resume them.
 
 ## Survey findings (FRAME, resolved 2026-07-01 — historical record)
 
@@ -105,7 +117,8 @@ real product screenshot/demo, and a distinct trust/privacy section. Accessible b
   `~/.claude/.credentials.json` file fallback, no refresh-token use — so a non-CLI user had no
   OAuth item and was forced onto the ephemeral, short-lived cookie WebView. **P1 slice (a) then
   shipped** broadened discovery (ordered Keychain items + file fallback + refresh machinery,
-  live endpoint left unwired); everything further is **frozen by ADR-012** (see `BACKLOG.md` P1).
+  live endpoint left unwired). That round froze expansion; the bounded official-client
+  connection revision is recorded in ADR-012 (2026-09-20).
 - **Site deploy target + CI — resolved: Vercel.** Project `houdini`, deployed manually via the
   prebuilt CLI (`vercel build --prod && vercel deploy --prebuilt --prod` from `site/` — see
   `RELEASE.md`). At survey time no site CI existed in `.github/workflows/` (only the app release

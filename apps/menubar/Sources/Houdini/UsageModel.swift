@@ -184,14 +184,14 @@ final class UsageModel: ObservableObject {
                 self.metrics = fresh
                 self.lastUpdated = Date()
                 self.needsLogin = false
-                self.state = .ok
+                self.state = fresh.isEmpty ? .error("No quota windows are available for this subscription.") : .ok
                 // Success ends any rate-limit backoff: snap back to the user's cadence.
                 self.rateLimitStrikes = 0
                 self.ticksToSkip = 0
             } catch {
                 guard generation == self.fetchGeneration else { return } // superseded → drop
                 // Last-good cache: keep `metrics`/`lastUpdated`; just flag the reason.
-                self.needsLogin = (error as? ProviderError).map { if case .needsLogin = $0 { true } else { false } } ?? false
+                self.needsLogin = Self.requiresLogin(error)
                 self.state = .error(UsageModel.message(for: error))
                 if case ProviderError.rateLimited = error {
                     // Widen the automatic cadence: skip 1, 3, then 7 ticks (2×/4×/8×
@@ -206,10 +206,18 @@ final class UsageModel: ObservableObject {
 
     /// Re-resolve auth and fetch immediately. Call after sign-in / sign-out / a
     /// prefer-cookie change so the menu bar reflects the new credential at once.
-    func reloadAuth() {
+    func reloadAuth(clearMetrics: Bool = false) {
         // Cancel + supersede any in-flight fetch so its (old-credential) result can
         // never land late and overwrite the new state.
         invalidateFetch()
+        if clearMetrics {
+            metrics = []
+            lastUpdated = nil
+            state = .loading
+            needsLogin = false
+            rateLimitStrikes = 0
+            ticksToSkip = 0
+        }
 
         // Reflect a sign-out instantly, even if a fetch was still in flight.
         if let resolveProvider, resolveProvider() == nil {
@@ -235,10 +243,11 @@ final class UsageModel: ObservableObject {
     /// going stale, and the honest remedy is re-running `claude`, not the
     /// claude.ai cookie sign-in (CORE-02/05).
     static func message(for error: Error) -> String {
+        if let error = error as? CodexClientError { return error.localizedDescription }
         if let providerError = error as? ProviderError {
             switch providerError {
             case .authExpired:
-                return "Claude token expired — run `claude` to refresh your token."
+                return "Claude credential expired — reconnect with Claude Code."
             case .needsLogin:
                 return "Claude.ai session expired — sign in again."
             case .rateLimited:
@@ -252,5 +261,16 @@ final class UsageModel: ObservableObject {
             }
         }
         return error.localizedDescription
+    }
+
+    private static func requiresLogin(_ error: Error) -> Bool {
+        if let error = error as? CodexClientError, case .needsLogin = error { return true }
+        if let error = error as? ProviderError {
+            switch error {
+            case .needsLogin, .authExpired: return true
+            default: return false
+            }
+        }
+        return false
     }
 }

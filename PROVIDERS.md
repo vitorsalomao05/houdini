@@ -1,12 +1,15 @@
 # Provider adapters
 
-Every data source implements one protocol. The UI never special-cases a provider; it reads capability flags and renders whatever metrics come back.
+Every usage source implements one protocol. Usage rendering reads capability flags and
+the metrics returned; connection flows follow the provider's ownership model.
+The accepted subscription changes below are in validation, not a published release.
+See [scope and acceptance criteria](docs/plans/subscription-connections.md).
 
 ## Contract
 
 ```swift
 protocol UsageProvider {
-    var id: String { get }                       // "claude", "claude-cookie", "anthropic-console", "openai-platform", "chatgpt-plus"
+    var id: String { get }                       // "claude", "claude-cookie", "chatgpt-codex"
     var displayName: String { get }
     var authMethod: AuthMethod { get }           // .keychainOAuth | .sessionCookie | .adminApiKey
     var capabilities: Capabilities { get }        // what this provider can actually supply
@@ -28,85 +31,85 @@ struct UsageMetric {
     var limit: Double?
     var resetAt: Date?
     var dollars: Double?
+    var windowDurationMinutes: Int?
     let providerId: String
 }
 
 enum AuthMethod { case keychainOAuth, sessionCookie, adminApiKey }
 ```
 
-Cross-cutting services in `FetcherCore`: `CredentialStore` (Keychain read/write), `ClaudeOAuthCredentialSource` (ordered credential discovery + in-memory refresh), `ClaudeUsageParser` (one parser for both Claude endpoint dialects), `CredentialRedirectGuard` (strips credential headers on cross-host redirects). There is **no `Scheduler` or `Cache` in core**: polling and last-good caching live in the menu bar app's `UsageModel` (user-chosen 30/60/120 s interval; failed polls back off multiplicatively), and the `houdini` CLI does a single uncached fetch.
+Cross-cutting services in `FetcherCore`: `CredentialStore` (Keychain read/write), `ClaudeOAuthCredentialSource` (ordered discovery; the live refresher remains unwired), `ClaudeUsageParser` (both Claude endpoint dialects), `CredentialRedirectGuard` (strips credential headers on cross-host redirects), and `CodexAppServerClient` (managed account/login/limits protocol). Polling and last-good caching live in the app's `UsageModel`; the `houdini` CLI retains its existing Claude path. The app's subscription selection does not imply a new CLI feature.
+
+Optional percentages, durations, and resets stay optional. A reset timestamp alone does
+not establish a five-hour or weekly window. Empty results mean unavailable usage, not
+zero consumption. Metrics and in-flight results belong to the selected subscription.
 
 ---
 
-## claude (Pro/Max) — FLAGSHIP, build first
+## claude (Pro/Max) — existing usage source; official-client connection
 - **Capabilities:** `usagePct`, `resetTimer` (+ `dollarBalance` if "Claude Extra" overage).
-- **Primary auth:** `.keychainOAuth` — reuse the **Claude Code OAuth token**. Discovery order (`ClaudeOAuthCredentialSource`): Keychain item `Claude Code-credentials` (primary), then the classic `Claude Code` item, then the `~/.claude/.credentials.json` file. The user already runs Claude Code, so this needs zero new login.
+- **Primary auth:** `.keychainOAuth` — reuse the **Claude Code OAuth token**. Discovery order (`ClaudeOAuthCredentialSource`): Keychain item `Claude Code-credentials` (primary), then the classic `Claude Code` item, then the `~/.claude/.credentials.json` file. Existing sessions need no new login; Houdini does not modify or refresh that credential.
+- **New connection:** launch the installed official client's [`claude auth login`](https://code.claude.com/docs/en/cli-reference), using its browser flow. Missing Claude Code produces installation guidance. The action is cancellable and bounded by a timeout. Exit zero triggers credential rediscovery and a usage fetch; a successful process alone does not establish usable quota access. Houdini does not log out Claude Code.
 - **Primary endpoint:** `GET https://api.anthropic.com/api/oauth/usage`
   - Headers: `Authorization: Bearer <token>` **and** `User-Agent: claude-code/<version>` (always send it — a missing UA **may cause throttling under sustained use**; the code keeps it for safety).
   - Returns 5-hour / 7-day / Opus-7-day utilization.
-- **Fallback auth:** `.sessionCookie` — realized in code as a **sibling provider `claude-cookie`** (`ClaudeCookieProvider`), chosen at runtime by `ClaudeAuthResolver` when no usable OAuth credential resolves (or when the user prefers cookie auth). The `sessionKey` cookie (`sk-ant-sid01-…`) comes from an embedded WebView login and is stored in Houdini's own Keychain item (`Houdini-claude-session`), written `kSecAttrAccessibleAfterFirstUnlock` — a **conscious choice** (audit SEC-09) so the launch-at-login agent can read it without a prompt; the trade-off is that the item is one notch broader than `WhenUnlocked` (decryptable while the Mac is locked, after the first unlock since boot). Then:
+- **Saved-session fallback:** `.sessionCookie` — sibling provider `claude-cookie` (`ClaudeCookieProvider`), selected by `ClaudeAuthResolver` when no usable OAuth credential resolves. Previously saved cookies remain readable from `Houdini-claude-session`; new connections no longer capture cookies or embed Google sign-in. The legacy item uses `kSecAttrAccessibleAfterFirstUnlock` (audit SEC-09), readable after the first unlock even while subsequently locked. Existing saved-session preferences remain compatibility state, not a new connection flow. The provider calls:
   - `GET https://claude.ai/api/organizations` → read `org_id`.
   - `GET https://claude.ai/api/organizations/{org_id}/usage` → fields: `five_hour.utilization_pct`, `five_hour.reset_at`, `seven_day.utilization_pct`, `seven_day_opus.utilization_pct`, `extra_usage.current_spending`, `extra_usage.budget_limit`.
-- **Fragility:** medium (undocumented). **Risk:** low (own account), though the volume is not a trickle: steady polling at the default 60 s is ~1,440 requests/day, and the cookie path issues two requests per poll (org lookup + usage).
-- **ToS / stance (ADR-012):** subscription OAuth token / claude.ai cookie use in a third-party app is **restricted by Anthropic's Consumer Terms**; Houdini's stance is **read-only + frozen** — it reads the user's existing on-device credential and adds no refresh / PKCE / cookie-hardening.
+- **Fragility / risk:** usage endpoints remain undocumented, and the residual third-party subscription-auth risk accepted in ADR-012 remains. At 60-second polling the OAuth path makes about 1,440 requests/day; the cookie path adds an organization lookup per poll. Launching the official client does not authorize or stabilize these private usage endpoints.
+- **Boundary (ADR-012, revised 2026-09-20):** read-only OAuth discovery and saved-cookie access, with official-client connection initiation. No Houdini OAuth refresh, PKCE, new cookie capture, or inference. The documented Claude Code statusline is a separate session-dependent data source, not the source implemented by this slice.
 - **Reference:** `github.com/ttar-p/claude-usage-widget`, `github.com/hamed-elfayome/Claude-Usage-Tracker`.
 
-## anthropic-console (API usage/cost) — secondary
+## chatgpt-codex — ChatGPT · Codex subscription limits
+- **Capabilities:** `usagePct`, `resetTimer`; only the windows actually returned. No billing, invoices, API costs, message-count estimates, or universal ChatGPT quota.
+- **Auth ownership:** `CodexUsageProvider` uses `.keychainOAuth` in the current contract, but the official Codex client owns tokens, persistence, and refresh. Houdini uses account methods; it does not read `auth.json` or token contents.
+- **Protocol:** [Codex App Server](https://learn.chatgpt.com/docs/app-server) JSON-RPC over stdio, with `initialize` / `initialized`, browser `account/login/start`, login-completion notification, `account/read`, and `account/rateLimits/read`. Missing/unsupported clients and process/protocol failures become safe, actionable errors. Browser login is explicit and cancellable; raw output and authentication URLs do not enter diagnostics.
+- **Quota mapping:** prefer `rateLimitsByLimitId` when populated, otherwise `rateLimits`. Preserve bucket names/IDs and primary/secondary windows without duplicating the fallback. `usedPercent` is required for each returned window; `windowDurationMins` and Unix-seconds `resetsAt` may be absent. Missing duration is not assumed to be five hours or a week.
+- **Local scope:** use `~/Library/Application Support/Houdini/Codex` (0700) as the canonical `CODEX_HOME` and child working directory. Use an environment allowlist rather than inheriting the developer's Codex/OpenAI variables. Check the home returned by `initialize`. Leave the normal `~/.codex` configuration and login untouched.
+- **Persistence:** require `cli_auth_credentials_store="keyring"`; never `auto` or file fallback. In official [`rust-v0.150.1` storage code](https://github.com/openai/codex/blob/rust-v0.150.1/codex-rs/login/src/auth/storage.rs), the service is `Codex Auth` and the account is `cli|` plus the first 16 hexadecimal characters of SHA-256 of canonical `CODEX_HOME`; load/save/delete share that namespace. This establishes the source-level separation, not an observed login/logout or real Keychain round trip.
+- **Compatibility evidence:** schema and storage inspected at `codex-cli 0.150.1`; the local implementation accepts `0.150.x`. Revalidate protocol and storage before widening that range. The isolated unauthenticated spike and fake-client tests do not establish live account quotas or persistence behavior; validation results belong in the delivery record.
+
+## anthropic-console (API usage/cost) — deferred, outside current priority
 - **Capabilities:** `dollarBalance` (cost), usage tokens. NOT remaining prepaid balance via API.
 - **Auth:** `.adminApiKey` — `sk-ant-admin…` (org accounts only; unavailable for individual accounts).
 - **Endpoints:** `GET https://api.anthropic.com/v1/organizations/usage_report/messages`, `…/cost_report`. Headers `x-api-key`, `anthropic-version: 2023-06-01`.
 
-## openai-platform (API usage/cost) — secondary
+## openai-platform (API usage/cost) — deferred, outside current priority
 - **Capabilities:** `dollarBalance` (cost), usage. NOT remaining credit balance (legacy `credit_grants` returns 401/403 in 2025–2026).
 - **Auth:** `.adminApiKey` — `sk-admin-…` (Bearer).
 - **Endpoints:** `GET https://api.openai.com/v1/organization/usage/*`, `GET https://api.openai.com/v1/organization/costs`.
 
-## chatgpt-plus (consumer quota) — EXPERIMENTAL, label clearly
-- **Capabilities:** at best `resetTimer` when throttled. No reliable continuous %.
-- **Auth:** `.sessionCookie` (dashboard).
-- **Reality:** OpenAI exposes no clean per-user "remaining messages" counter; only implicit "limit reached / resets at X". Implement as best-effort; show "limited / OK" state, not a fake gauge.
+---
+
+## Accepted implementation order
+1. Preserve Claude usage reads and replace new embedded sign-in with official Claude Code login.
+2. Add ChatGPT · Codex account connection and supported quota windows.
+3. Select one subscription across the app's surfaces and validate switching and connection failures.
+
+API adapters and the former experimental ChatGPT cookie approach are outside this scope
+(ADR-004/011). Work status lives in `BACKLOG.md`.
 
 ---
 
-## Build order
-1. `claude` via `.keychainOAuth` (validate the number against the real account using `houdini`).
-2. `claude` `.sessionCookie` fallback (covers users without Claude Code).
-3. `openai-platform` + `anthropic-console` admin-API adapters.
-4. `chatgpt-plus` experimental.
-
----
-
-## Provider switcher (app Settings) — design, not yet built
+## Subscription selection (app Settings) — current slice, in validation
 
 The user picks and configures providers **inside the native app's Settings** — never
 on the website (ADR-011). The site presents capability as one honest line and ships
 no per-provider key UI.
 
 ```
-Settings ▸ Providers
-  ● Claude            Connected · Claude Code token (Keychain)        [Reconnect]
-  ○ OpenAI Platform   Not connected                                  [Connect ▸]
-  ○ Anthropic Console Not connected                                  [Connect ▸]
+Settings ▸ Subscription
+  Claude | ChatGPT · Codex
 ```
 
-- **Registry-driven.** The list is rendered from `ProviderRegistry`; adding a provider
-  in `FetcherCore` makes a row appear with no UI rewrite (capability flags drive what
-  each row can show — ADR-007).
-- **Connect flow per `authMethod`:**
-  - `.keychainOAuth` (Claude) — auto-detect the Claude Code token; one tap to reuse it.
-  - `.sessionCookie` (Claude fallback / ChatGPT Plus) — native `WKWebView` login; capture
-    cookie → Keychain.
-  - `.adminApiKey` (OpenAI Platform, Anthropic Console) — a single secure field in
-    Settings. The key is written **straight to the macOS Keychain** and read only by
-    native code at fetch time.
-- **Active provider** drives the menu-bar headline + popover ordering; multiple connected
-  providers stack in the popover.
-
-### OpenAI Platform = the planned 2nd provider
-- **Connect:** paste an **organization admin key** (`sk-admin-…`) in Settings.
-- **Stored:** macOS Keychain only (service-scoped, e.g. `Houdini-openai-admin`).
-- **Read:** native `URLSession` → `GET /v1/organization/usage/*`, `…/costs` (Bearer).
-- **Shows:** `$` spent this period + token counts (no clean per-user % — ADR-004).
+- **Connect:** Claude launches its official client's browser login; ChatGPT · Codex
+  uses its isolated App Server login. Already-saved Claude cookies remain a fallback.
+- **One active subscription** drives the menu-bar headline, popover, and desktop widget.
+  Switching clears displayed metrics and rejects stale results from the previous
+  selection. Simultaneous provider stacking and the old speculative registry UI are
+  outside this slice.
+- **Missing client:** show the official installation link. Never install silently or
+  substitute API-key billing for subscription quotas.
 
 ### Hard rule — keys never touch the frontend, site, or repo (ADR-011)
 A provider **API/admin key is a secret**. It is entered **only** in the native app's

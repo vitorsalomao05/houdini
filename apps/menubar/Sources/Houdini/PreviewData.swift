@@ -7,6 +7,24 @@ import FetcherCore
 enum PreviewData {
     static let providerId = "claude"
 
+    @MainActor
+    static func session(settings: AppSettings) -> SubscriptionSession {
+        let source = ClaudeOAuthCredentialSource(keychainRead: { service in
+            throw CredentialError.notFound(service: service)
+        }, fileRead: { nil }, refresher: nil)
+        return SubscriptionSession(settings: settings, claude: ClaudeSession(
+            settings: settings, resolver: ClaudeAuthResolver(oauthSource: source, cookiePresent: { false }),
+            login: {}), codexClient: CodexAppServerClient(
+                executableURL: URL(fileURLWithPath: "/nonexistent/houdini-preview/codex")))
+    }
+
+    static func codexMetrics(now: Date = Date()) -> [UsageMetric] {
+        [UsageMetric(label: "codex · 5-hour", pct: 24, resetAt: now.addingTimeInterval(7_200),
+                     providerId: "chatgpt-codex", windowDurationMinutes: 300),
+         UsageMetric(label: "codex · 7-day", pct: 63, resetAt: now.addingTimeInterval(3 * 86_400),
+                     providerId: "chatgpt-codex", windowDurationMinutes: 10_080)]
+    }
+
     /// An all-green "healthy account" reading, for the marketing two-up shot.
     static func healthyMetrics(now: Date = Date()) -> [UsageMetric] {
         [

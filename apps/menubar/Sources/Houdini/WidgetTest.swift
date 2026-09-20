@@ -32,7 +32,7 @@ enum WidgetTest {
 
         let settings = AppSettings(defaults: UserDefaults(suiteName: "houdini.widgettest.settings")!)
         settings.showDesktopWidget = true
-        let session = ClaudeSession(settings: settings)
+        let session = PreviewData.session(settings: settings)
         func makeController() -> DesktopWidgetController {
             DesktopWidgetController(
                 model: UsageModel(previewResult: .success(PreviewData.sampleMetrics())),

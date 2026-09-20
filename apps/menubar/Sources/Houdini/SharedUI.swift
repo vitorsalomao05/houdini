@@ -125,7 +125,7 @@ struct StatusDot: View {
 /// invitation, and the sign-in button (present only with a live session — headless
 /// snapshots pass nil). Centered; the caller sizes the surrounding frame.
 struct NeedsAuthView: View {
-    var session: ClaudeSession?
+    var session: SubscriptionSession?
 
     var body: some View {
         VStack(spacing: Theme.Spacing.state) {
@@ -134,19 +134,16 @@ struct NeedsAuthView: View {
                 .foregroundStyle(LinearGradient(colors: [Theme.Colors.accent, Theme.Colors.accentMagenta],
                                                 startPoint: .top, endPoint: .bottom))
                 .accessibilityHidden(true) // decorative — the copy + button carry the meaning
-            Text("Connect Claude")
+            Text("Connect \(session?.displayName ?? "Claude")")
                 .scaledFont(14, weight: .semibold, relativeTo: .headline)
-            Text("Sign in to see your Claude usage and spend.")
+            Text("Sign in to see consumption, quota limits and reset times.")
                 .scaledFont(11, relativeTo: .caption).glassSecondaryText()
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             if let session {
-                Button { session.signIn() } label: {
-                    Text("Connect Claude").frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
-                .tint(Theme.Colors.accent)
+                ConnectionActionsView(session: session)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
             }
         }
         .padding(.horizontal, Theme.Spacing.state)

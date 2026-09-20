@@ -82,6 +82,8 @@ jobs:
           # --metrictest: known-answer assertions on the menu-bar strings
           # (deterministic PreviewData; exits non-zero on any mismatch).
           "$BIN" --metrictest
+          # Official-client handoff and subscription switching use only fake credentials.
+          "$BIN" --authtest
           # --widgettest: real checks with a genuine pass/fail exit code. It
           # exits 0 with a "no display available" note on a headless machine —
           # treat that skip as a failure so verification can't be silently

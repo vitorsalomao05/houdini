@@ -59,10 +59,11 @@ enum Snapshotter {
 
         // Isolated defaults so a snapshot run never clobbers the user's real prefs.
         let settings = AppSettings(defaults: UserDefaults(suiteName: "houdini.snapshot") ?? .standard)
+        settings.subscription = .claude
         settings.primaryMetric = .fiveHour // mirror the shipped default (out-of-the-box bar)
         settings.refreshInterval = 60
         let launch = LaunchAtLogin()
-        let session = ClaudeSession(settings: settings)
+        let session = PreviewData.session(settings: settings)
 
         for scheme in [ColorScheme.light, .dark] {
             let suffix = scheme == .dark ? "dark" : "light"
@@ -73,7 +74,7 @@ enum Snapshotter {
                                    metrics: metrics)
 
             // The popover is now forced-dark glass (rendered once, all states, below).
-            writePNG(SettingsView(settings: settings, launch: launch, session: session),
+            writePNG(SettingsView(settings: settings, launch: launch, session: session, model: model),
                      to: "\(dir)/settings-\(suffix).png", scheme: scheme)
             writePNG(MenuBarPreview(model: model, settings: settings, scheme: scheme),
                      to: "\(dir)/menubar-\(suffix).png", scheme: scheme)
@@ -83,6 +84,11 @@ enum Snapshotter {
 
         renderPopover(metrics: metrics, session: session, dir: dir)
         renderWidget(metrics: metrics, session: session, dir: dir)
+        settings.subscription = .chatgptCodex
+        let codexDirectory = "\(dir)/codex"
+        try? FileManager.default.createDirectory(atPath: codexDirectory, withIntermediateDirectories: true)
+        renderPopover(metrics: PreviewData.codexMetrics(), session: session, dir: codexDirectory)
+        renderWidget(metrics: PreviewData.codexMetrics(), session: session, dir: codexDirectory)
         FileHandle.standardError.write(Data("snapshots (light+dark) written to \(dir)\n".utf8))
     }
 
@@ -92,12 +98,12 @@ enum Snapshotter {
     /// captured offscreen, so `widgetRenderMode = .snapshot` draws the same opaque
     /// dark-glass approximation the widget uses — an approximation for review.
     @MainActor
-    private static func renderPopover(metrics: [UsageMetric], session: ClaudeSession, dir: String) {
+    private static func renderPopover(metrics: [UsageMetric], session: SubscriptionSession, dir: String) {
         let states: [(String, UsageModel)] = [
             ("ok",         UsageModel(previewResult: .success(metrics))),
             ("loading",    UsageModel()),                                   // .loading, no data → skeleton
             ("needs-auth", UsageModel(previewState: .signedOut)),
-            ("error",      UsageModel(previewState: .error("Claude token expired — run `claude` to refresh your token."))),
+            ("error",      UsageModel(previewState: .error("Subscription usage is unavailable. Connect again."))),
             ("stale",      UsageModel(previewState: .error("Network error: request timed out"), metrics: metrics)),
         ]
         for (name, model) in states {
@@ -131,7 +137,7 @@ enum Snapshotter {
     /// floating card + shadow read; the live behind-window blur can't be captured
     /// offscreen, so `widgetRenderMode = .snapshot` draws a translucent stand-in.
     @MainActor
-    private static func render(_ model: UsageModel, _ session: ClaudeSession,
+    private static func render(_ model: UsageModel, _ session: SubscriptionSession,
                               size: NSSize, lightBackdrop: Bool,
                               reduceTransparency: Bool, to path: String) {
         let view = ZStack {
@@ -147,7 +153,7 @@ enum Snapshotter {
     }
 
     @MainActor
-    private static func renderWidget(metrics: [UsageMetric], session: ClaudeSession, dir: String) {
+    private static func renderWidget(metrics: [UsageMetric], session: SubscriptionSession, dir: String) {
         let regular = NSSize(width: 312, height: 232)  // card 280×200 + shadow margin
         let compact = NSSize(width: 252, height: 182)  // card 220×150 + shadow margin
 
@@ -177,13 +183,15 @@ enum Snapshotter {
                reduceTransparency: true, to: "\(dir)/widget-reduce-transparency-dark.png")
 
         // Marketing two-up (busy + healthy) over the wallpaper — the site asset.
-        renderMarketing(session: session, to: "\(dir)/widget-marketing.png")
+        if session.selected == .claude {
+            renderMarketing(session: session, to: "\(dir)/widget-marketing.png")
+        }
     }
 
     /// Two widget cards side by side (a busy account + a healthy one) over the
     /// wallpaper — replaces the site's `desktop-widget.png` with the native look.
     @MainActor
-    private static func renderMarketing(session: ClaudeSession, to path: String) {
+    private static func renderMarketing(session: SubscriptionSession, to path: String) {
         let busy = UsageModel(previewResult: .success(PreviewData.sampleMetrics()))
         let healthy = UsageModel(previewResult: .success(PreviewData.healthyMetrics()))
         let card = NSSize(width: 312, height: 232)

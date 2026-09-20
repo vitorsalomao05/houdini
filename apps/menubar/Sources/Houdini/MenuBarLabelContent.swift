@@ -19,7 +19,11 @@ struct MenuBarLabelContent: View {
             // drops its threshold color and dims (75% primary — 6.69:1 light /
             // 7.34:1 dark, still AA) and a small warning triangle appears.
             HStack(spacing: 4) {
-                ProviderGlyph()
+                if settings.subscription == .claude {
+                    ProviderGlyph()
+                } else {
+                    Image(systemName: "terminal").accessibilityLabel("ChatGPT · Codex")
+                }
                 if isStale {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 10, weight: .medium))
@@ -31,25 +35,29 @@ struct MenuBarLabelContent: View {
             }
             .font(.system(size: 13, weight: .medium))
             .accessibilityElement(children: .combine)
-            .accessibilityLabel(isStale ? "\(Format.barLabel(primary)), showing last value"
-                                        : Format.barLabel(primary))
+            .accessibilityLabel("\(settings.subscription.displayName), " + (isStale
+                ? "\(Format.barLabel(primary)), showing last value" : Format.barLabel(primary)))
         } else if model.state.isSignedOut {
             // No Claude credential → invite sign-in from the menu bar.
             HStack(spacing: 4) {
                 Image(systemName: "person.crop.circle.badge.questionmark")
-                Text("Sign in")
+                Text("\(settings.subscription.shortName) · Sign in")
             }
             .font(.system(size: 13, weight: .medium))
             .foregroundStyle(.secondary)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(settings.subscription.displayName), sign in")
         } else {
             // No data yet, or an error before any good reading.
             HStack(spacing: 4) {
                 Image(systemName: model.state.isError ? "exclamationmark.triangle.fill"
                                                       : "gauge.with.dots.needle.67percent")
-                Text(model.state.isError ? "—" : "…")
+                Text("\(settings.subscription.shortName) \(model.state.isError ? "—" : "…")")
             }
             .font(.system(size: 13, weight: .medium))
             .foregroundStyle(model.state.isError ? Color.orange : Color.primary)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(settings.subscription.displayName), \(model.state.isError ? "usage unavailable" : "loading usage")")
         }
     }
 }

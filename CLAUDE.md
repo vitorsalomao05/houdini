@@ -6,9 +6,10 @@
 
 ## What Houdini is (one line)
 
-A local-first **macOS app** that reveals your AI usage and spend — in the menu bar and
-on the desktop. **Claude (Pro/Max) is live today**; OpenAI and the Anthropic
-Console are on the roadmap. No account, no server — credentials stay in the Keychain.
+A local-first **macOS app** for subscription consumption, limits, and quota resets — in
+the menu bar and on the desktop. **Claude (Pro/Max) is live today**; Claude official-client
+connections and **ChatGPT · Codex** limits are the accepted work in validation. No Houdini
+account or server; see ADR-004/011/012 for provider scope and credential boundaries.
 
 Pitch we lead with on the site: *"See your Claude spend at a glance, right from your
 Mac's menu bar."*
@@ -41,6 +42,9 @@ repo map + real commands + the top BACKLOG item.
 - `ROADMAP.md` — phased plan.
 - `RELEASE.md` — release checklist + per-release go-live records.
 - `CONTEXT.md` / `BACKLOG.md` — the Build Conductor product context and work queue.
+- **Subscription login, quota reads, or provider switching:** read
+  `docs/plans/subscription-connections.md` for the accepted scope and validation criteria,
+  then `DECISIONS.md` ADR-004/005/011/012 and `PROVIDERS.md` for the integration boundaries.
 
 ## How we work (Build Conductor)
 
@@ -92,7 +96,7 @@ and the budget rule are defined once in the sections below — not restated per 
 - **Opus 4.8** — routine/mechanical edits, line-level code review, and **security-adjacent
   code**. Houdini handles Keychain credentials and OAuth tokens, so auth/credential paths
   are security-adjacent by definition (e.g. `core/**/ClaudeAuth*`, `ClaudeOAuthProvider`,
-  `ClaudeLoginWindow`, anything reading the Keychain or handling cookies/tokens) → Opus.
+  `ClaudeCodeLogin`, `CodexAppServerClient`, anything reading the Keychain or handling cookies/tokens) → Opus.
 - **Sonnet** — interactive/conversational sessions.
 
 ### Git workflow
@@ -118,23 +122,19 @@ and the budget rule are defined once in the sections below — not restated per 
 
 ## Current priorities (app-first — see BACKLOG for detail)
 
-1. **P1 · Login/credential refactor — DONE (capped).** Slice (a) — broadened discovery of
-   an existing credential — shipped; further subscription-auth expansion is **frozen** per
-   ADR-012, and a user with no Claude Code credential anywhere is out of scope by decision.
-2. **P2 · Widget accessibility + visual polish — DONE.** Menu bar + desktop widget, end to
-   end; slices 1–2 shipped and slice 3 (real-data verification) owner-verified 2026-07-07.
-   See `BACKLOG.md`.
-3. **P3 · Site polish + ongoing features** — get the site to *zero visual clutter*, then
-   keep shipping features/ideas as requested. The site is an evolving surface, not a
-   one-time deliverable. **← active focus** now that v1 is closed.
+The active entry in `BACKLOG.md` is authoritative. Complete the accepted subscription
+scope through validation; distinguish local implementation, observed behavior, and a
+published release. Preserve the paused #3/#4 WIPs and their index/worktree separation.
+Historical site, API-provider, and updater entries do not expand this scope.
 
 ## Guardrails (do not violate without explicit sign-off)
 
-- **Security & privacy first.** Credentials live only in the macOS Keychain. There is no
-  Houdini server and must not be one; requests go straight from the user's Mac to each
-  provider's own endpoint. Never log, transmit, cache to disk, or otherwise leak tokens
-  or cookies. Any *future* elevated permission (e.g. the last-resort browser-scrape
-  fallback) must be provably secure and least-privilege before it ships.
+- **Security & privacy first.** Persist Houdini-owned credentials only in the macOS
+  Keychain; preserve the read-only existing-Claude fallback described in ADR-005/012.
+  Authentication goes only to the relevant provider, with no Houdini backend. Keep
+  tokens/cookies out of logs, plaintext caches, and process diagnostics. Any future
+  elevated permission (e.g. the last-resort browser-scrape fallback) must be provably
+  secure and least-privilege before it ships.
 - **Free & open source.** No paywalls, no account required to install or use.
 - **Ruthless minimalism on the site.** Target is **zero visual clutter/pollution** and
   **WCAG 2.1 AA** accessibility. Every added element must earn its place.
@@ -147,8 +147,11 @@ and the budget rule are defined once in the sections below — not restated per 
 
 ## Verification expectations (per change)
 
-- **Auth changes:** test *both* the CLI-token path and the non-CLI path; confirm no
-  credential ever leaves the device or hits disk/logs.
+- **Auth changes:** test existing Claude OAuth discovery and saved-cookie fallback,
+  official-client connection/cancellation, and isolated Codex account/limits reads with
+  fake clients and credentials. Confirm no secrets enter disk logs or raw process-error
+  output. Record live provider login separately from synthetic tests; see the scope's
+  complete acceptance criteria.
 - **Any UI change (app or site):** check keyboard access, visible focus, and text
   contrast; don't regress accessibility.
 - **Site changes:** re-run the live visual + accessibility audit (Claude in Chrome) and
@@ -172,11 +175,13 @@ and the budget rule are defined once in the sections below — not restated per 
   user without the Claude Code CLI was forced onto the ephemeral, short-lived claude.ai
   **cookie** WebView. **P1 slice (a) then shipped** ordered Keychain discovery
   (`"Claude Code-credentials"` → `"Claude Code"`), a read-only credentials-file fallback, and
-  refresh machinery (live endpoint left unwired). Everything further — including the
-  first-run OAuth PKCE flow the survey floated — is **frozen by ADR-012**; see `BACKLOG.md` P1.
+  refresh machinery (live endpoint left unwired). The 2026-09-20 ADR-012 revision permits
+  launching official Claude Code login; Houdini-owned refresh, PKCE, and new cookie
+  capture remain outside the accepted scope.
 - **Test setup** — `core/` has real tests: `FetcherCoreTests` (swift-testing / `import Testing`)
   plus a `houdini-selftest` executable that re-runs the same assertions on CommandLineTools-only
-  machines (`swift test` no-ops there). **No test targets** in `apps/menubar` (smoke via built
+  machines where the test runner previously no-oped. Run `swift test` and report the actual
+  test count; the installed Swift 6.4 CLT runs the suites. **No test targets** in `apps/menubar` (smoke via built
   binary flags: `--selftest`/`--metrictest`/`--snapshot`/`--launchtest`), `apps/widget`, `apps/ios`,
   or `site/`.
 - **`feature_list.json` / init script** — neither existed at FRAME; both were created that
@@ -185,10 +190,10 @@ and the budget rule are defined once in the sections below — not restated per 
 
 ## Open questions / proposed doc fixes (flagged, not silently changed)
 
-- **Claude subscription-auth posture — DECIDED 2026-07-01 (ADR-012):** keep the Claude integration
-  **read-only** on the user's existing credential and **freeze** expansion (no refresh / PKCE /
-  cookie-hardening); a user with no Claude Code credential anywhere is out of scope by decision.
-  P1 is capped at slice (a). See ADR-012.
+- **Claude subscription-auth posture — REVISED 2026-09-20:** ADR-012 retains read-only
+  access and the recorded residual risk while permitting Houdini to initiate the official
+  Claude Code browser login. Read the ADR before changing any credential ownership or
+  persistence behavior.
 - **ADR-006 vs reality — RESOLVED 2026-07-01:** ADR-006 was **revised in place** to record that the
   ad-hoc-signed `install.sh` / `curl|bash` path is the shipping reality (notarized DMG deferred),
   ending the drift.

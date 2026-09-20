@@ -86,7 +86,12 @@ extension Array where Element == UsageMetric {
     var rankedRingWindows: [UsageMetric] {
         let priority: [String: Int] = ["5-hour": 0, "Weekly": 1]
         return filter { $0.dollars == nil }.sorted { a, b in
-            let pa = priority[a.label] ?? 9, pb = priority[b.label] ?? 9
+            func rank(_ metric: UsageMetric) -> Int {
+                if metric.windowDurationMinutes == 300 { return 0 }
+                if metric.windowDurationMinutes == 10_080 { return 1 }
+                return priority[metric.label] ?? 9
+            }
+            let pa = rank(a), pb = rank(b)
             if pa != pb { return pa < pb }
             return (a.pct ?? -1) > (b.pct ?? -1)
         }
@@ -104,6 +109,10 @@ extension Array where Element == UsageMetric {
     func primary(for choice: PrimaryMetricChoice) -> UsageMetric? {
         guard let label = choice.metricLabel else { return tightest }
         if let exact = first(where: { $0.label == label }) { return exact }
+        let duration: Int? = choice == .fiveHour ? 300 : (choice == .weekly ? 10_080 : nil)
+        if let duration, let window = filter({ $0.windowDurationMinutes == duration }).tightestPercentage {
+            return window
+        }
         return tightestPercentage ?? tightest
     }
 }

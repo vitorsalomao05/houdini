@@ -23,7 +23,9 @@ import AppKit
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var launch: LaunchAtLogin
-    @ObservedObject var session: ClaudeSession
+    @ObservedObject var session: SubscriptionSession
+    @ObservedObject var model: UsageModel
+    var allowsSystemSettings = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -32,15 +34,22 @@ struct SettingsView: View {
                 Text("Houdini Settings").scaledFont(15, weight: .semibold, relativeTo: .headline)
             }
 
-            section("Claude account") {
+            section("Subscription") {
+                Picker("Subscription", selection: $settings.subscription) {
+                    ForEach(TrackedSubscription.allCases) { subscription in
+                        Text(subscription.displayName).tag(subscription)
+                    }
+                }
+                .pickerStyle(.segmented)
                 accountStatus
-                accountButtons
-                preferCookieToggle
-                if let error = session.lastError {
-                    Label(error, systemImage: "exclamationmark.triangle.fill")
-                        .scaledFont(11, relativeTo: .caption)
-                        .foregroundStyle(.orange)
-                        .fixedSize(horizontal: false, vertical: true)
+                caption(session.connectionContext)
+                ConnectionActionsView(session: session)
+                if session.selected == .claude {
+                    caption("Houdini reads your existing Claude credential; Anthropic's terms restrict third-party use of subscription OAuth; use at your discretion.")
+                    if session.claude.hasCookie {
+                        Button("Remove saved Claude.ai session") { session.claude.signOut() }
+                            .help("Removes only Houdini's saved session. Your Claude Code login stays unchanged.")
+                    }
                 }
             }
 
@@ -51,7 +60,7 @@ struct SettingsView: View {
 
             section("Desktop widget") {
                 desktopWidgetToggle
-                caption("A floating glass panel on your desktop with the same usage and spend.")
+                caption("A floating panel with the selected subscription’s quota windows.")
             }
 
             section("Refresh") {
@@ -61,6 +70,7 @@ struct SettingsView: View {
 
             section("General") {
                 launchToggle
+                    .disabled(!allowsSystemSettings)
                 if let error = launch.lastError {
                     Label(error, systemImage: "exclamationmark.triangle.fill")
                         .scaledFont(11, relativeTo: .caption)
@@ -85,86 +95,33 @@ struct SettingsView: View {
         .background(Color(nsColor: .windowBackgroundColor))
     }
 
-    // MARK: - Claude account
+    // MARK: - Subscription status
 
-    /// Active auth indicator: "Claude Code token" | "Claude.ai login" | "Not signed in".
     private var accountStatus: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 6) {
-                Image(systemName: authIcon).foregroundStyle(authColor)
-                // Two runs (label + bold value) as sibling Texts rather than a
-                // Text(+)Text concatenation, so each can carry the scaledFont
-                // modifier (a View modifier, not composable with Text's `+`).
-                HStack(spacing: 0) {
-                    Text("Active: ").scaledFont(13)
-                    Text(session.activeAuthLabel).scaledFont(13, weight: .semibold)
-                }
-            }
-            caption(accountContext)
-            caption("Houdini reads your existing Claude credential; Anthropic's terms restrict third-party use of subscription OAuth; use at your discretion.")
+        HStack(spacing: 6) {
+            Image(systemName: model.state == .ok ? "checkmark.circle.fill" : "info.circle")
+                .foregroundStyle(model.state == .ok ? Color.green : Color.secondary)
+            Text(connectionStatus).scaledFont(13)
                 .fixedSize(horizontal: false, vertical: true)
         }
+        .accessibilityElement(children: .combine)
     }
 
-    private var authIcon: String {
-        switch session.activeAuth {
-        case .oauth:  return "key.fill"
-        case .cookie: return "globe"
-        case .none:   return "person.crop.circle.badge.questionmark"
+    private var connectionStatus: String {
+        if session.isSigningIn { return "Complete sign-in in your browser…" }
+        switch model.state {
+        case .ok: return "Connected · usage updated"
+        case .loading: return "Checking usage…"
+        case .signedOut: return "Connect to see your quota windows."
+        case .error(let message): return message
         }
-    }
-
-    private var authColor: Color {
-        switch session.activeAuth {
-        case .oauth, .cookie: return .green
-        case .none:           return .orange
-        }
-    }
-
-    /// One line of context about what's available and why.
-    private var accountContext: String {
-        switch session.activeAuth {
-        case .oauth:
-            return session.hasCookie
-                ? "Using your Claude Code token. A claude.ai login is also saved."
-                : "Reusing the Claude Code OAuth token — no separate login needed."
-        case .cookie:
-            return session.hasOAuthToken
-                ? "Using your claude.ai login (preferred over the Claude Code token)."
-                : "Using your claude.ai login."
-        case .none:
-            return "Sign in to claude.ai, or run Claude Code, to show your usage."
-        }
-    }
-
-    private var accountButtons: some View {
-        HStack(spacing: 8) {
-            Button(session.hasCookie ? "Re-sign in to Claude.ai…" : "Sign in to Claude.ai…") {
-                session.signIn()
-            }
-            if session.hasCookie {
-                Button("Sign out") { session.signOut() }
-            }
-        }
-    }
-
-    /// Escape hatch (requirement C): force the cookie path for testing.
-    private var preferCookieToggle: some View {
-        Toggle(isOn: $settings.preferCookieAuth) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Prefer Claude.ai login").scaledFont(13)
-                Text("Use the cookie even when a Claude Code token exists.")
-                    .scaledFont(11, relativeTo: .caption).foregroundStyle(.secondary)
-            }
-        }
-        .toggleStyle(.switch)
     }
 
     // MARK: - Primary metric (native radio group)
 
     private var metricPicker: some View {
         Picker("Primary metric", selection: $settings.primaryMetric) {
-            ForEach(PrimaryMetricChoice.allCases) { choice in
+            ForEach(session.selected.metricChoices) { choice in
                 Text(choice.displayName).tag(choice)
             }
         }
