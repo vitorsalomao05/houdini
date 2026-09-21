@@ -34,17 +34,12 @@ Publication and local replacement are tracked in `RELEASE.md`.
 - [x] Verify [#2](https://github.com/vitorsalomao05/houdini/issues/2): the shared
   gauge already shipped with single-line scaling in v1.0.0/v1.1.0. Native SwiftUI
   rendering confirms `100%` remains intact at the actual widget/popover sizes.
-- [~] **Priority maintenance — site build dependencies:** update Astro, Sharp and
-  affected transitive dependencies, then validate image output, navigation and
-  production HTTP checks. `npm audit` reports nine affected packages, including
-  [Astro image optimization](https://github.com/withastro/astro/security/advisories/GHSA-26w7-cxv4-gfx2).
-  The deployed site is static, with trusted local PNG build inputs and no public
-  image-processing endpoint; this does not eliminate risk in CI/development or
-  authorize untrusted build inputs. Complete remediation requires a separately
-  reviewed framework upgrade, not `npm audit fix --force` during restoration.
-  Astro 7 / Sharp 0.35.4 and corrected transitives are implemented in an isolated
-  worktree. Local Node 22/24 builds, image checks and browser checks passed; CI and
-  production delivery are pending. See the [maintenance validation](docs/validation/site-build-dependencies-2026-09-21.md).
+- [x] **Priority maintenance — site build dependencies:** Astro 7.3.3, Sharp
+  0.35.4 and affected transitives updated; npm audit now reports zero affected
+  packages. Independent reviews and Node 22/24 CI passed. The integrated site
+  passed all 76 production HTTP checks with image, navigation and guided-install
+  verification; native v1.1.0 and paused WIPs remain preserved. Evidence and
+  migration sources: [maintenance validation](docs/validation/site-build-dependencies-2026-09-21.md).
 
 The entries below retain the prior work record; they are not the current execution queue.
 
