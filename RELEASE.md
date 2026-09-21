@@ -28,7 +28,12 @@ Paused WIPs #3/#4 remain preserved and outside this release.
 
 - [x] Implementation and owner acceptance recorded; real Codex login, reads and
       restart recovery observed; keyboard/focus and display-based widget checks passed.
-- [ ] Complete release branch CI and independent final review.
+- [x] Release-branch [CI 35546582376](https://github.com/vitorsalomao05/houdini/actions/runs/35546582376)
+      passed on a fresh runner: 103 core tests in 11 suites, 88 selftest checks,
+      10 metric checks, 26 auth checks and 11 display-dependent widget checks;
+      site build and iOS-library compile also passed. Independent Standards and
+      Spec reviews found no blocking findings; navigation/test-fixture follow-ups
+      were reviewed before release.
 - [ ] Publish `v1.1.0` through the sole CI publisher; record run and asset checksums.
 - [ ] Deploy and verify the production site and its current-version pointers.
 - [ ] Replace the installed app/CLI with checksum-verified published artifacts;
@@ -36,6 +41,25 @@ Paused WIPs #3/#4 remain preserved and outside this release.
 - [ ] Retitle the previous release as superseded and record final WIP preservation.
 
 Release notes: [`docs/releases/v1.1.0.md`](docs/releases/v1.1.0.md).
+
+The first hosted run exposed a two-second test-fixture deadline shorter than the
+cold Xcode Python startup under concurrent tests. Protocol assertions now use the
+same 20-second budget as production. The explicit timeout/cancellation fixture uses
+only shell builtins and verifies an actually started child is stopped. Production
+deadlines remain unchanged (20 seconds per request, 300 seconds for login).
+Temporary CI diagnostics were removed before the passing final run.
+
+The first publisher run, [35546687425](https://github.com/vitorsalomao05/houdini/actions/runs/35546687425),
+then failed before publishing any assets: the timeout test still overrode that
+budget with five seconds, including the preliminary version probe, and attempted
+to read a server PID that did not exist. A controlled six-second version response
+reproduced the exact missing-PID failure locally; retaining the 20-second production
+budget passed the same reproduction while preserving timeout, cancellation and
+child-exit assertions. The temporary delay was removed before final verification.
+
+Site QA also found that Astro navigation removed `html.js`, hiding the guided
+installer's Next/Back controls. Restoring the class after a document swap passed
+desktop/mobile, keyboard, focus, provider-selection and FAQ checks.
 
 ---
 

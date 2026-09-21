@@ -112,8 +112,7 @@ private struct FakeCodex {
             emit({'id':request['id'],'result':result})
         """#.replacingOccurrences(of: "MODE", with: mode)
         // Timeout/cancellation only need a child that never responds. Keep that
-        // fixture on shell builtins so Python/Xcode bootstrap cannot consume
-        // its deliberately shorter deadline before the server even starts.
+        // fixture on shell builtins to avoid Python/Xcode bootstrap overhead.
         let stalledBody = #"""
         #!/bin/sh
         if [ "$1" = "--version" ]; then
@@ -202,7 +201,11 @@ private struct FakeCodex {
         for cancel in [false, true] {
             // The shell fixture consumes requests but never responds; only
             // the client's timeout/cancellation can finish this operation.
-            let fake = try FakeCodex(mode: "timeout", timeout: cancel ? 20 : 5)
+            // The same budget also covers the version probe. A five-second
+            // override could expire before the server starts on a busy runner,
+            // so no server PID would exist to verify cleanup. Keep the production
+            // budget for both paths and retain the PID/termination assertions.
+            let fake = try FakeCodex(mode: "timeout")
             defer { fake.remove() }
             let task = Task { try await fake.client.fetch() }
             defer { task.cancel() }
