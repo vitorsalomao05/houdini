@@ -8,6 +8,7 @@ xcuserdata/
 .swiftpm/
 # Node / site
 node_modules/
+.vercel/
 dist/
 .astro/
 # Secrets — never commit
@@ -28,3 +29,6 @@ conductor/prompts/
 
 # Claude Code local state/settings (machine-local; never commit)
 .claude/
+
+# Python verification caches
+__pycache__/

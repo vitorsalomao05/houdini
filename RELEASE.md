@@ -256,12 +256,17 @@ from the new release, SHA-256 match, idempotent re-run.
 - [ ] Confirm the site references only `vX.Y.Z` (no old links, no "coming soon").
 - [ ] If a feature shipped, the relevant section is **adapted** (re-framed), not a
       loose new block bolted on (ADR-010).
-- [ ] Deploy production from `site/`: `vercel build --prod && vercel deploy
-      --prebuilt --prod` (the practiced prebuilt two-step). Preview deploys —
-      `vercel deploy` with no `--prod` — are safe for review and do **not**
-      touch production.
-- [ ] Smoke-test production: home, `/install`, `/guide` all 200; one-liner copies the
-      `vX.Y.Z` command.
+- [ ] Confirm Vercel project `houdini` has Root Directory `site`, framework Astro,
+      install `npm ci`, build `npm run build`, and output `dist`. Git pushes to
+      `master` also publish production, including documentation-only commits.
+- [ ] For a prebuilt CLI deployment, run from the repository root:
+      `vercel pull --yes --environment=production`, `vercel build --prod`, then
+      `vercel deploy --prebuilt --prod`. Vercel applies the configured `site` root.
+      Preview deploys without `--prod` do not touch production.
+- [ ] Run `python3 scripts/verify_site.py` after the final production deployment,
+      including any deployment triggered by release-record commits. Require all
+      checks to pass; Vercel Ready status is insufficient. Verify the guided
+      installation in a browser and confirm the one-liner copies `vX.Y.Z`.
 
 ## 7 · Post-release
 - [ ] Update `ROADMAP.md` / `DECISIONS.md` if the release changed direction.

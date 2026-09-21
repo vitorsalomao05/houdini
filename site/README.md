@@ -37,9 +37,14 @@ npm run preview  # serve the built dist/ locally
   Codex subscription usage, limits, and resets. Codex is not a universal ChatGPT quota.
 - No provider API/admin key ever lives in this site or the repo — keys belong only in the
   app's macOS Keychain (ADR-011).
-- Deploy: **Vercel** — root directory `site`, framework Astro, build `npm run build`,
-  output `dist`. Live at https://houdini.salomao.org. Production deploys with
-  `vercel build --prod` then `vercel deploy --prebuilt --prod` from `site/`;
-  `vercel deploy` (no `--prod`) makes a review-only preview.
+- Deploy: **Vercel**, project `houdini` — project Root Directory **`site`**,
+  framework **Astro**, install **`npm ci`**, build **`npm run build`**, output **`dist`**.
+  The build settings are also pinned in `site/vercel.json`; Root Directory must be
+  configured on the Vercel project. Git pushes to `master` publish production.
+  Run CLI deployments from the **repository root**, because Vercel applies the
+  configured `site` directory: `vercel pull --yes --environment=production`,
+  `vercel build --prod`, then `vercel deploy --prebuilt --prod`.
+  Verify with `python3 scripts/verify_site.py` from the repository root; a Ready
+  deployment alone does not prove that public routes work.
 - OG card: `node scripts/og/build.mjs` regenerates `public/og.png` (1200×630, rendered
   with headless Chrome from an inlined HTML template).
