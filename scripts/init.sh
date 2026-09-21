@@ -46,7 +46,7 @@ printf '%sHoudini — developer bootstrap%s  %s(%s)%s\n' "$BOLD" "$RST" "$DIM" "
 # ── 1. Toolchain ─────────────────────────────────────────────────────────────
 h "Toolchain"
 need swift "required to build core/ + apps/menubar (Swift 6 / CommandLineTools or Xcode 16+)"
-need node  "required to build the site/ (Astro). Install Node 20+ (repo/Vercel use 24.x)"
+need node  "required to build the site/ (Astro). Install Node 22.12+ (Vercel uses 24.x)"
 need npm   "required to install + build the site/"
 # Optional / nice-to-have.
 if have git;      then ok "git — $(git --version)"; else warn "git not found (needed to release/commit)"; fi
