@@ -70,9 +70,9 @@ private struct FakeCodex {
         let script = root.appendingPathComponent("codex")
         requests = root.appendingPathComponent("requests.jsonl")
         pid = root.appendingPathComponent("pid")
-        let body = #"""
+        let protocolBody = #"""
         #!/usr/bin/python3
-        import sys, json, os, time
+        import sys, json, os
         mode = 'MODE'
         if '--version' in sys.argv:
             print('codex-cli 0.149.0' if mode == 'old' else 'codex-cli 0.150.1', flush=True)
@@ -93,7 +93,6 @@ private struct FakeCodex {
             with open(root + '/requests.jsonl', 'a') as f: f.write(line)
             method = request['method']
             if method == 'initialized': continue
-            if mode == 'timeout': time.sleep(30); continue
             if mode == 'eof': sys.exit(0)
             if mode == 'oversize': print('x' * 1100000, flush=True); continue
             if mode == 'error':
@@ -112,6 +111,19 @@ private struct FakeCodex {
                 sys.exit(5)
             emit({'id':request['id'],'result':result})
         """#.replacingOccurrences(of: "MODE", with: mode)
+        // Timeout/cancellation only need a child that never responds. Keep that
+        // fixture on shell builtins so Python/Xcode bootstrap cannot consume
+        // its deliberately shorter deadline before the server even starts.
+        let stalledBody = #"""
+        #!/bin/sh
+        if [ "$1" = "--version" ]; then
+            printf '%s\n' 'codex-cli 0.150.1'
+            exit 0
+        fi
+        printf '%s' "$$" > "${0%/*}/pid"
+        while IFS= read -r line; do :; done
+        """#
+        let body = mode == "timeout" ? stalledBody : protocolBody
         try body.write(to: script, atomically: true, encoding: .utf8)
         try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: script.path)
         client = CodexAppServerClient(executableURL: script, stateDirectory: root.appendingPathComponent("state"), requestTimeout: timeout, loginTimeout: timeout)
@@ -188,9 +200,8 @@ private struct FakeCodex {
 
     @Test func timeoutAndCancellationStopChild() async throws {
         for cancel in [false, true] {
-            // Leave enough time for the cold interpreter to reach the server
-            // before testing its deliberate 30-second stall. Five seconds is
-            // still below that stall and the production request budget.
+            // The shell fixture consumes requests but never responds; only
+            // the client's timeout/cancellation can finish this operation.
             let fake = try FakeCodex(mode: "timeout", timeout: cancel ? 20 : 5)
             defer { fake.remove() }
             let task = Task { try await fake.client.fetch() }
