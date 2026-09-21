@@ -9,8 +9,8 @@ Houdini is the only brand on the site. "Menu bar" and "Desktop widget" are co-eq
 
 ## Develop
 
-Use Node **22.12+** (Node **24** recommended, matching Vercel). CI builds and
-checks the locked dependencies on both Node 22 and 24.
+Use Node **22.x (>=22.12)** or **24.x** (recommended, matching Vercel). CI builds
+and checks the locked dependencies on both supported major versions.
 
 ```sh
 cd site
