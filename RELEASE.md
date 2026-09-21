@@ -17,7 +17,7 @@ Replace `X.Y.Z` with the new version (and `P.Q.R` with the previous one).
 
 ---
 
-## ▶ v1.1.0 — production delivery in progress, 2026-09-20
+## ▶ v1.1.0 — SHIPPED 2026-09-20 (subscription connections)
 
 Minor version: Claude official-client browser connections, Codex quota windows,
 subscription selection across app surfaces, and restored desktop-widget resize
@@ -34,11 +34,41 @@ Paused WIPs #3/#4 remain preserved and outside this release.
       site build and iOS-library compile also passed. Independent Standards and
       Spec reviews found no blocking findings; navigation/test-fixture follow-ups
       were reviewed before release.
-- [ ] Publish `v1.1.0` through the sole CI publisher; record run and asset checksums.
-- [ ] Deploy and verify the production site and its current-version pointers.
-- [ ] Replace the installed app/CLI with checksum-verified published artifacts;
-      preserve rollback copies and verify the installed version and Codex connection.
-- [ ] Retitle the previous release as superseded and record final WIP preservation.
+- [x] Published immutable [`v1.1.0`](https://github.com/vitorsalomao05/houdini/releases/tag/v1.1.0)
+      from `267ea5166f66c3e02b29a4196259599e48400f32` through
+      [publisher 35547764661](https://github.com/vitorsalomao05/houdini/actions/runs/35547764661).
+      All gates passed: 103 core tests, 88 selftest checks, 10 metric checks,
+      26 auth checks and 11 display-dependent widget checks.
+      [Tag CI 35547764697](https://github.com/vitorsalomao05/houdini/actions/runs/35547764697)
+      also passed core/app/site and iOS-library verification. Redundant master
+      and release-branch runs of that same commit were cancelled.
+- [x] Downloaded all three published assets, verified SHA-256 and the app's
+      ad-hoc signature, and checked app **1.1.0 / build 7**, CLI **1.1.0**.
+      SHA-256: `Houdini.app.zip`
+      `b122e6640ea73a60d0b816598c50c1e41ad2ce4c03920ff3dad1701a4d9b0238`;
+      `houdini` `8f5e977f9b40fbb441aab3af929e9e89bc7862dd29b5ec35f2bf59b8f27f18ab`.
+- [x] Deployed the reviewed prebuilt site to the existing Vercel project,
+      deployment `dpl_9WrAHv8fBeUfa1nxxXrZSjkWsAzk`. Production
+      [houdini.salomao.org](https://houdini.salomao.org) passed **37/37 HTTP checks**:
+      seven routes, current install pointers, official-client instructions,
+      branded 404s, reviewed OG image, sitemaps and legacy-domain redirects.
+      The verifier was corrected to exclude Astro's generator metadata version
+      from advertised Houdini version pointers; no site change was needed.
+- [x] Updated the existing v1.0.0 install with `houdini update 1.1.0`, without
+      `HOUDINI_YES`. App and CLI bytes match the published artifacts; the installed
+      app process is running from `~/Applications/Houdini.app`, and
+      `houdini update --check --json` reports **upToDate**. The installer skipped
+      login-item registration. The complete v1.0.0 app/CLI backup remains in
+      `Houdini-assinaturas-2026-09-20/production-backup-v1.0.0/`.
+- [x] Rechecked the existing Codex connection through the adapter compiled from
+      the published source: one 7-day window, 3% used, no new login. This is a live
+      adapter check, **not** a fresh native-UI observation: macOS computer automation
+      returned timeouts/window errors. Earlier native UI acceptance remains above;
+      the installed CLI's provider registry does not expose Codex.
+- [x] Retitled v1.0.0 as **superseded — do not install**, retaining its tag and
+      immutable assets; v1.1.0 is Latest. Original WIPs #3/#4 remain intact:
+      192 files, HEAD, branch, status, exact index and staged/unstaged patches
+      match the preservation snapshot.
 
 Release notes: [`docs/releases/v1.1.0.md`](docs/releases/v1.1.0.md).
 
