@@ -116,6 +116,10 @@ jobs:
           npm ci
           npm run build
 
+      - name: Verify site deployment checks against the build
+        working-directory: .
+        run: python3 -m unittest discover -s tests -p test_verify_site.py
+
   # Job 4 — FetcherCore (the library only) compiles for the iOS Simulator,
   # keeping README's "iOS-compilable" claim true cheaply (PER-05). The iOS app
   # itself is an unbuilt scaffold (ADR-008) and is deliberately NOT built.
