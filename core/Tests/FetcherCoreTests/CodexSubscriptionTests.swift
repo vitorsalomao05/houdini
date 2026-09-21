@@ -61,7 +61,10 @@ private struct FakeCodex {
     let requests: URL
     let pid: URL
 
-    init(mode: String = "success", timeout: TimeInterval = 2) throws {
+    // Use the production request budget for protocol assertions. On a fresh
+    // Xcode runner, Python's first launch alone can consume most of two seconds;
+    // that bootstrap is not the protocol failure these tests are exercising.
+    init(mode: String = "success", timeout: TimeInterval = 20) throws {
         root = FileManager.default.temporaryDirectory.appendingPathComponent("houdini-fake-codex-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let script = root.appendingPathComponent("codex")
@@ -185,14 +188,22 @@ private struct FakeCodex {
 
     @Test func timeoutAndCancellationStopChild() async throws {
         for cancel in [false, true] {
-            let fake = try FakeCodex(mode: "timeout", timeout: cancel ? 5 : 1.5)
+            // Leave enough time for the cold interpreter to reach the server
+            // before testing its deliberate 30-second stall. Five seconds is
+            // still below that stall and the production request budget.
+            let fake = try FakeCodex(mode: "timeout", timeout: cancel ? 20 : 5)
             defer { fake.remove() }
             let task = Task { try await fake.client.fetch() }
+            defer { task.cancel() }
             if cancel {
-                for _ in 0..<100 {
-                    if FileManager.default.fileExists(atPath: fake.pid.path) { break }
+                let deadline = ContinuousClock.now + .seconds(20)
+                while !FileManager.default.fileExists(atPath: fake.pid.path),
+                      ContinuousClock.now < deadline {
                     try await Task.sleep(for: .milliseconds(20))
                 }
+                // Cancelling during interpreter bootstrap would not prove the
+                // app-server child is stopped; require server readiness first.
+                try #require(FileManager.default.fileExists(atPath: fake.pid.path))
                 task.cancel()
             }
             do {
