@@ -10,6 +10,8 @@ import sitemap from "@astrojs/sitemap";
 // (public/) points crawlers at the generated sitemap-index.xml.
 export default defineConfig({
   site: "https://houdini.salomao.org",
+  // Preserve HTML-aware inline spacing across the Astro 7 compiler upgrade.
+  compressHTML: true,
   integrations: [sitemap()],
   vite: {
     plugins: [tailwindcss()],

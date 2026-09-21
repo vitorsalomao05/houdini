@@ -9,9 +9,12 @@ Houdini is the only brand on the site. "Menu bar" and "Desktop widget" are co-eq
 
 ## Develop
 
+Use Node **22.12+** (Node **24** recommended, matching Vercel). CI builds and
+checks the locked dependencies on both Node 22 and 24.
+
 ```sh
 cd site
-npm install
+npm ci
 npm run dev      # local dev server (http://localhost:4321)
 npm run build    # static build → dist/
 npm run preview  # serve the built dist/ locally
